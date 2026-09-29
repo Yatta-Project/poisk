@@ -63,6 +63,7 @@ namespace Vicinae.UI {
             search_entry.placeholder_text = "Type a command, app, window, or math...";
             search_entry.add_css_class ("vicinae-search-entry");
             search_entry.search_changed.connect (on_search_changed);
+            search_entry.activate.connect (activate_selected);
 
             header_box.append (search_entry);
             root_box.append (header_box);
@@ -120,6 +121,7 @@ namespace Vicinae.UI {
 
         private void setup_key_handling () {
             var key_controller = new EventControllerKey ();
+            key_controller.set_propagation_phase (PropagationPhase.CAPTURE);
             key_controller.key_pressed.connect ((keyval, keycode, state) => {
                 if (keyval == Gdk.Key.Escape) {
                     if (Application.dmenu_mode) {
@@ -237,12 +239,12 @@ namespace Vicinae.UI {
         private void on_row_activated (ListBoxRow row) {
             if (row is ResultRow) {
                 var res = (ResultRow) row;
-                res.item.execute ();
                 if (Application.dmenu_mode) {
                     this.destroy ();
                 } else {
                     this.set_visible (false);
                 }
+                res.item.execute ();
             }
         }
 
@@ -259,17 +261,26 @@ namespace Vicinae.UI {
             var next = result_list.get_row_at_index (idx);
             if (next != null) {
                 result_list.select_row (next);
-                next.grab_focus ();
+                var vadj = list_scroll.get_vadjustment ();
+                if (vadj != null) {
+                    double target_y = idx * 48.0;
+                    vadj.clamp_page (target_y, target_y + 48.0);
+                }
             }
         }
 
         private void select_prev_row () {
             var current = result_list.get_selected_row ();
             if (current != null && current.get_index () > 0) {
-                var prev = result_list.get_row_at_index (current.get_index () - 1);
+                int idx = current.get_index () - 1;
+                var prev = result_list.get_row_at_index (idx);
                 if (prev != null) {
                     result_list.select_row (prev);
-                    prev.grab_focus ();
+                    var vadj = list_scroll.get_vadjustment ();
+                    if (vadj != null) {
+                        double target_y = idx * 48.0;
+                        vadj.clamp_page (target_y, target_y + 48.0);
+                    }
                 }
             }
         }

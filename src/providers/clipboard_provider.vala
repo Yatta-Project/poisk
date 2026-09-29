@@ -53,10 +53,7 @@ namespace Vicinae.Providers {
                     item.action_label = "Copy to Clipboard";
                     item.preview_text = clip;
 
-                    item.callback = () => {
-                        this.activate (item);
-                    };
-
+                    item.provider = this;
                     items.append (item);
                 }
                 idx++;

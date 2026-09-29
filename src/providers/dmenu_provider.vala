@@ -39,10 +39,8 @@ namespace Vicinae.Providers {
                     );
                     item.score = score;
                     item.action_label = "Select";
-                    item.preview_text = "<b>Selection</b>\n\n%s".printf (Markup.escape_text (text));
-                    item.callback = () => {
-                        on_select (text);
-                    };
+                    item.provider = this;
+                    item.extra_info = text;
 
                     items.append (item);
                 }
@@ -52,7 +50,7 @@ namespace Vicinae.Providers {
         }
 
         public void activate (SearchItem item) {
-            item.execute ();
+            on_select (item.extra_info);
         }
     }
 }

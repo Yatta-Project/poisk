@@ -43,10 +43,7 @@ namespace Vicinae.Providers {
                     Markup.escape_text (formatted)
                 );
 
-                item.callback = () => {
-                    this.activate (item);
-                };
-
+                item.provider = this;
                 items.append (item);
             }
 

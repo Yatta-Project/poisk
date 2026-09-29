@@ -76,16 +76,14 @@ namespace Vicinae.Providers {
                     );
                     item.score = score;
                     item.action_label = "Launch Application";
+                    item.provider = this;
+                    item.target_object = app;
                     item.preview_text = "<b>%s</b>\n\n%s\n\nCommand: <tt>%s</tt>\nDesktop File: <tt>%s</tt>".printf (
                         Markup.escape_text (name),
                         Markup.escape_text (desc.length > 0 ? desc : "No description available"),
                         Markup.escape_text (exec),
                         Markup.escape_text (app_id)
                     );
-
-                    item.callback = () => {
-                        this.activate (item);
-                    };
 
                     items.append (item);
                 }
@@ -95,17 +93,42 @@ namespace Vicinae.Providers {
         }
 
         public void activate (SearchItem item) {
-            string app_id = item.id.replace ("app:", "");
-            foreach (unowned AppInfo app in cached_apps) {
-                if (app.get_id () == app_id || app.get_name () == app_id || app.get_display_name () == app_id) {
-                    try {
-                        app.launch (null, null);
-                        Database.get_default ().record_app_launch (app_id);
-                    } catch (Error e) {
-                        warning ("Failed to launch application %s: %s", app.get_name (), e.message);
+            AppInfo? app = item.target_object as AppInfo;
+            if (app == null) {
+                string app_id = item.id.replace ("app:", "");
+                foreach (unowned AppInfo a in cached_apps) {
+                    if (a.get_id () == app_id || a.get_name () == app_id || a.get_display_name () == app_id) {
+                        app = a;
+                        break;
                     }
-                    break;
                 }
+            }
+
+            if (app != null) {
+                bool launched = false;
+                try {
+                    var display = Gdk.Display.get_default ();
+                    var context = display != null ? display.get_app_launch_context () : null;
+                    launched = app.launch (null, context);
+                    Database.get_default ().record_app_launch (app.get_id () ?? item.id);
+                } catch (Error e) {
+                    warning ("AppProvider: app.launch failed for %s: %s", app.get_name (), e.message);
+                }
+
+                if (!launched) {
+                    string? cmd = app.get_commandline ();
+                    if (cmd != null && cmd.length > 0) {
+                        try {
+                            string clean_cmd = cmd.replace ("%u", "").replace ("%U", "").replace ("%f", "").replace ("%F", "").strip ();
+                            Process.spawn_command_line_async (clean_cmd);
+                            launched = true;
+                        } catch (SpawnError se) {
+                            warning ("AppProvider: spawn fallback failed for %s: %s", app.get_name (), se.message);
+                        }
+                    }
+                }
+            } else {
+                warning ("AppProvider: Could not find AppInfo for %s", item.id);
             }
         }
     }

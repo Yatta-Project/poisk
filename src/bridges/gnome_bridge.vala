@@ -95,13 +95,10 @@ namespace Vicinae.Bridges {
                             "Open Windows"
                         );
                         item.action_label = "Switch to Window";
+                        item.extra_info = "%lld".printf (win_id);
                         item.preview_text = "Window: %s\nClass: %s\nID: %lld\nWorkspace: %lld".printf (
                             display_title, wm_class, win_id, ws + 1
                         );
-
-                        item.callback = () => {
-                            this.activate_window.begin ("%lld".printf (win_id));
-                        };
 
                         items.append (item);
                     }

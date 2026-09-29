@@ -38,6 +38,7 @@ namespace Vicinae.Providers {
 
                 if (score > 0) {
                     win.score = score;
+                    win.provider = this;
                     results.append (win);
                 }
             }
@@ -46,7 +47,9 @@ namespace Vicinae.Providers {
         }
 
         public void activate (SearchItem item) {
-            item.execute ();
+            if (item.extra_info.length > 0) {
+                bridge.activate_window.begin (item.extra_info);
+            }
         }
     }
 }

@@ -126,10 +126,7 @@ namespace Vicinae.Providers {
                         Markup.escape_text (cmd.mode)
                     );
 
-                    item.callback = () => {
-                        this.activate (item);
-                    };
-
+                    item.provider = this;
                     items.append (item);
                 }
             }

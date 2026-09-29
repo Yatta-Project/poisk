@@ -1,7 +1,5 @@
 namespace Vicinae.Core {
 
-    public delegate void ActionCallback (SearchItem item);
-
     public class SearchItem : Object {
         public string id { get; set; default = ""; }
         public string title { get; set; default = ""; }
@@ -13,7 +11,8 @@ namespace Vicinae.Core {
         public string action_label { get; set; default = "Open"; }
         public string extra_info { get; set; default = ""; }
         
-        public unowned ActionCallback? callback { get; set; default = null; }
+        public weak SearchProvider? provider { get; set; default = null; }
+        public Object? target_object { get; set; default = null; }
 
         public SearchItem (string id, string title, string subtitle, string icon_name, string category) {
             this.id = id;
@@ -24,8 +23,8 @@ namespace Vicinae.Core {
         }
 
         public void execute () {
-            if (callback != null) {
-                callback (this);
+            if (provider != null) {
+                provider.activate (this);
             }
         }
     }
