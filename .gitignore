@@ -1,0 +1,6 @@
+build/
+subprojects/
+*.o
+*.so
+*.p/
+.system_generated/
