@@ -43,6 +43,7 @@ sources = files(
   'src/providers/dmenu_provider.vala',
   'src/ui/result_row.vala',
   'src/ui/preview_pane.vala',
+  'src/ui/app_grid.vala',
   'src/ui/window.vala',
 )
 
