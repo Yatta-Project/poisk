@@ -1,4 +1,4 @@
-namespace Vicinae.Core {
+namespace Poisk.Core {
 
     public class SearchEngine : Object {
         private List<SearchProvider> providers = new List<SearchProvider> ();
@@ -34,6 +34,15 @@ namespace Vicinae.Core {
             });
 
             return results;
+        }
+
+        public List<SearchItem> get_all_applications () {
+            foreach (unowned SearchProvider provider in providers) {
+                if (provider is Poisk.Providers.AppProvider) {
+                    return ((Poisk.Providers.AppProvider) provider).get_all_applications ();
+                }
+            }
+            return new List<SearchItem> ();
         }
 
         public static int fuzzy_score (string pattern, string text) {

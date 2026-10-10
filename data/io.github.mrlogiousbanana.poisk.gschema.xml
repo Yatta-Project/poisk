@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist gettext-domain="poisk">
+  <schema id="io.github.mrlogiousbanana.poisk" path="/io/github/mrlogiousbanana/poisk/">
+    <key name="enable-frosted-glass" type="b">
+      <default>true</default>
+      <summary>Enable translucent blur effect</summary>
+      <description>Whether to render background blur effect under the capsule</description>
+    </key>
+    <key name="max-results" type="i">
+      <default>30</default>
+      <summary>Maximum search results to display</summary>
+      <description>Limit of items displayed in the search result list</description>
+    </key>
+  </schema>
+</schemalist>

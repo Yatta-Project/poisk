@@ -1,6 +1,6 @@
-using Vicinae.Core;
+using Poisk.Core;
 
-namespace Vicinae.Bridges {
+namespace Poisk.Bridges {
 
     [DBus (name = "org.gnome.Shell.Extensions.Windows")]
     public interface GnomeWindowsProxy : GLib.Object {
@@ -11,20 +11,12 @@ namespace Vicinae.Bridges {
         public abstract async void maximize (uint32 winid) throws Error;
     }
 
-    [DBus (name = "org.gnome.Shell.Extensions.Clipboard")]
-    public interface GnomeClipboardProxy : GLib.Object {
-        public abstract async string get_current_content () throws Error;
-        public abstract async void set_content (string content) throws Error;
-        public signal void clipboard_changed (uint8[] content, string mime_type, string source_app);
-    }
-
     public class GnomeBridge : DesktopBridge {
         public override string name { get { return "GNOME Shell (Mutter)"; } }
         private bool _is_available = false;
         public override bool is_available { get { return _is_available; } }
 
         private GnomeWindowsProxy? windows_proxy = null;
-        private GnomeClipboardProxy? clipboard_proxy = null;
 
         public GnomeBridge () {
             init_dbus.begin ();
@@ -37,25 +29,10 @@ namespace Vicinae.Bridges {
                     "org.gnome.Shell",
                     "/org/gnome/Shell/Extensions/Windows"
                 );
-
-                clipboard_proxy = yield Bus.get_proxy<GnomeClipboardProxy> (
-                    BusType.SESSION,
-                    "org.gnome.Shell",
-                    "/org/gnome/Shell/Extensions/Clipboard"
-                );
-
-                if (clipboard_proxy != null) {
-                    clipboard_proxy.clipboard_changed.connect ((content, mime_type, source_app) => {
-                        string text = (string) content;
-                        Database.get_default ().add_clipboard_entry (text, mime_type, source_app);
-                        this.clipboard_changed (text, source_app);
-                    });
-                }
-
-                _is_available = true;
+                _is_available = (windows_proxy != null);
             } catch (Error e) {
                 _is_available = false;
-                debug ("GnomeBridge: Extensions D-Bus not active yet: %s", e.message);
+                debug ("GnomeBridge: Extensions D-Bus not active: %s", e.message);
             }
         }
 
@@ -68,7 +45,7 @@ namespace Vicinae.Bridges {
                 var parser = new Json.Parser ();
                 parser.load_from_data (json_data);
                 var root = parser.get_root ();
-                if (root == null || !root.is_null () == false || root.get_node_type () != Json.NodeType.ARRAY) {
+                if (root != null && root.get_node_type () == Json.NodeType.ARRAY) {
                     var array = root.get_array ();
                     foreach (unowned Json.Node element in array.get_elements ()) {
                         if (element.get_node_type () != Json.NodeType.OBJECT) continue;

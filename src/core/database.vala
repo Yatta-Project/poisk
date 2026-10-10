@@ -1,6 +1,6 @@
 using Sqlite;
 
-namespace Vicinae.Core {
+namespace Poisk.Core {
 
     public class Database : Object {
         private Sqlite.Database db;
@@ -14,9 +14,9 @@ namespace Vicinae.Core {
         }
 
         private Database () {
-            string data_dir = Path.build_filename (Environment.get_user_data_dir (), "vicinae");
+            string data_dir = Path.build_filename (Environment.get_user_data_dir (), "poisk");
             DirUtils.create_with_parents (data_dir, 0755);
-            string db_path = Path.build_filename (data_dir, "vicinae.db");
+            string db_path = Path.build_filename (data_dir, "poisk.db");
 
             int rc = Sqlite.Database.open (db_path, out db);
             if (rc != Sqlite.OK) {
@@ -34,15 +34,6 @@ namespace Vicinae.Core {
                     count INTEGER DEFAULT 1,
                     last_used INTEGER
                 );
-                CREATE TABLE IF NOT EXISTS clipboard_history (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    content TEXT NOT NULL,
-                    mime_type TEXT DEFAULT 'text/plain',
-                    source_app TEXT,
-                    timestamp INTEGER,
-                    pinned INTEGER DEFAULT 0
-                );
-                CREATE INDEX IF NOT EXISTS idx_clip_time ON clipboard_history(timestamp DESC);
             """;
 
             char* errmsg;
@@ -80,55 +71,6 @@ namespace Vicinae.Core {
                 }
             }
             return 0;
-        }
-
-        public void add_clipboard_entry (string content, string mime_type = "text/plain", string? source_app = null) {
-            if (content.strip ().length == 0) return;
-
-            // Avoid immediate duplicate of last entry
-            string check_sql = "SELECT content FROM clipboard_history ORDER BY id DESC LIMIT 1";
-            Statement check_stmt;
-            if (db.prepare_v2 (check_sql, -1, out check_stmt) == Sqlite.OK) {
-                if (check_stmt.step () == Sqlite.ROW) {
-                    if (check_stmt.column_text (0) == content) {
-                        return;
-                    }
-                }
-            }
-
-            string sql = """
-                INSERT INTO clipboard_history (content, mime_type, source_app, timestamp)
-                VALUES (?1, ?2, ?3, unixepoch());
-            """;
-
-            Statement stmt;
-            int rc = db.prepare_v2 (sql, -1, out stmt);
-            if (rc == Sqlite.OK) {
-                stmt.bind_text (1, content);
-                stmt.bind_text (2, mime_type);
-                stmt.bind_text (3, source_app ?? "Unknown");
-                stmt.step ();
-            }
-        }
-
-        public List<string> get_recent_clipboard (int limit = 50, string? search = null) {
-            var list = new List<string> ();
-            string sql = "SELECT content FROM clipboard_history WHERE 1=1";
-            if (search != null && search.length > 0) {
-                sql += " AND content LIKE ?1";
-            }
-            sql += " ORDER BY id DESC LIMIT " + limit.to_string ();
-
-            Statement stmt;
-            if (db.prepare_v2 (sql, -1, out stmt) == Sqlite.OK) {
-                if (search != null && search.length > 0) {
-                    stmt.bind_text (1, "%%%s%%".printf (search));
-                }
-                while (stmt.step () == Sqlite.ROW) {
-                    list.append (stmt.column_text (0));
-                }
-            }
-            return list;
         }
     }
 }

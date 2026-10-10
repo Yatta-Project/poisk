@@ -1,4 +1,4 @@
-namespace Vicinae.Core {
+namespace Poisk.Core {
 
     public interface SearchProvider : Object {
         public abstract string id { get; }

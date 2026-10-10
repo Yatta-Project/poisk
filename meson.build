@@ -1,5 +1,5 @@
-project('vicinae-vala', ['c', 'vala'],
-  version: '0.1.0',
+project('poisk', ['c', 'vala'],
+  version: '1.0.0',
   meson_version: '>= 0.60.0',
   default_options: [
     'warning_level=2',
@@ -23,8 +23,14 @@ json_glib_dep = dependency('json-glib-1.0')
 sqlite_dep = dependency('sqlite3')
 posix_dep = meson.get_compiler('vala').find_library('posix')
 
+x11_dep = dependency('x11')
+gtk4_x11_dep = dependency('gtk4-x11')
+
 # Vala flags
-add_project_arguments(['--vapidir=' + meson.current_source_dir() + '/vapi'], language: 'vala')
+add_project_arguments([
+  '--vapidir=' + meson.current_source_dir() + '/vapi',
+  '--pkg=x11_utils',
+], language: 'vala')
 
 sources = files(
   'src/main.vala',
@@ -37,17 +43,18 @@ sources = files(
   'src/bridges/pantheon_bridge.vala',
   'src/providers/app_provider.vala',
   'src/providers/window_provider.vala',
-  'src/providers/clipboard_provider.vala',
   'src/providers/calc_provider.vala',
-  'src/providers/script_provider.vala',
-  'src/providers/dmenu_provider.vala',
+  'src/ui/satellite_button.vala',
+  'src/ui/frosted_box.vala',
+  'src/ui/pill_header.vala',
   'src/ui/result_row.vala',
   'src/ui/preview_pane.vala',
   'src/ui/app_grid.vala',
   'src/ui/window.vala',
+  'src/ui/x11_utils.c',
 )
 
-executable('vicinae',
+executable('poisk',
   sources,
   dependencies: [
     glib_dep,
@@ -60,12 +67,41 @@ executable('vicinae',
     json_glib_dep,
     sqlite_dep,
     posix_dep,
+    x11_dep,
+    gtk4_x11_dep,
     m_dep,
   ],
   install: true,
 )
 
+executable('poisk-superd',
+  files('src/daemon/superd.c'),
+  install: true,
+)
+
 install_data(
-  'data/org.vicinae.launcher.desktop',
+  'data/io.github.mrlogiousbanana.poisk.desktop',
   install_dir: get_option('datadir') / 'applications',
+)
+
+install_data(
+  'data/io.github.mrlogiousbanana.poisk.gschema.xml',
+  install_dir: get_option('datadir') / 'glib-2.0' / 'schemas',
+)
+
+systemd_dep = dependency('systemd', required: false)
+if systemd_dep.found()
+  systemd_user_unit_dir = systemd_dep.get_variable('systemduserunitdir', default_value: get_option('prefix') / 'lib' / 'systemd' / 'user')
+else
+  systemd_user_unit_dir = get_option('prefix') / 'lib' / 'systemd' / 'user'
+endif
+
+install_data(
+  'data/systemd/poisk.service',
+  'data/systemd/poisk-superd.service',
+  install_dir: systemd_user_unit_dir,
+)
+
+gnome.post_install(
+  glib_compile_schemas: true,
 )

@@ -1,7 +1,7 @@
-using Vicinae.Core;
-using Vicinae.Bridges;
+using Poisk.Core;
+using Poisk.Bridges;
 
-namespace Vicinae.Providers {
+namespace Poisk.Providers {
 
     public class WindowProvider : Object, SearchProvider {
         public string id { get { return "windows"; } }

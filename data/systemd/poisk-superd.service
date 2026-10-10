@@ -1,0 +1,14 @@
+[Unit]
+Description=Poisk Super Key Daemon
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/poisk-superd
+Restart=always
+RestartSec=2
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target

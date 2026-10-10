@@ -1,6 +1,6 @@
-using Vicinae.Core;
+using Poisk.Core;
 
-namespace Vicinae.Providers {
+namespace Poisk.Providers {
 
     public class AppProvider : Object, SearchProvider {
         public string id { get { return "apps"; } }
@@ -89,6 +89,36 @@ namespace Vicinae.Providers {
                 }
             }
 
+            return items;
+        }
+
+        public List<SearchItem> get_all_applications () {
+            var items = new List<SearchItem> ();
+            foreach (unowned AppInfo app in cached_apps) {
+                string name = app.get_display_name () ?? app.get_name () ?? "";
+                string desc = app.get_description () ?? "";
+                string exec = app.get_executable () ?? "";
+                string app_id = app.get_id () ?? name;
+
+                string icon_name = "application-x-executable";
+                var icon = app.get_icon ();
+                if (icon != null) {
+                    icon_name = icon.to_string ();
+                }
+
+                var item = new SearchItem (
+                    "app:" + app_id,
+                    name,
+                    desc.length > 0 ? desc : exec,
+                    icon_name,
+                    "Applications"
+                );
+                item.action_label = "Launch Application";
+                item.provider = this;
+                item.target_object = app;
+                items.append (item);
+            }
+            items.sort ((a, b) => a.title.collate (b.title));
             return items;
         }
 

@@ -1,4 +1,4 @@
-namespace Vicinae.Core {
+namespace Poisk.Core {
 
     public class SearchItem : Object {
         public string id { get; set; default = ""; }

@@ -1,26 +1,22 @@
 using Gtk;
 using Adw;
-using Vicinae.Core;
-using Vicinae.Bridges;
-using Vicinae.Providers;
-using Vicinae.UI;
+using Poisk.Core;
+using Poisk.Bridges;
+using Poisk.Providers;
+using Poisk.UI;
 
-namespace Vicinae {
+namespace Poisk {
 
     public class Application : Adw.Application {
         private SearchEngine engine;
         private DesktopBridge desktop_bridge;
         private LauncherWindow? window = null;
 
-        public static bool dmenu_mode = false;
-        private static GLib.List<string> dmenu_lines;
-
-        public Application (bool is_dmenu = false) {
+        public Application () {
             Object (
-                application_id: is_dmenu ? null : "org.vicinae.launcher",
-                flags: is_dmenu ? ApplicationFlags.FLAGS_NONE : ApplicationFlags.HANDLES_COMMAND_LINE
+                application_id: "io.github.mrlogiousbanana.poisk",
+                flags: ApplicationFlags.HANDLES_COMMAND_LINE
             );
-            dmenu_mode = is_dmenu;
         }
 
         protected override void startup () {
@@ -28,43 +24,33 @@ namespace Vicinae {
             Adw.init ();
             Granite.init ();
 
-            if (dmenu_mode) {
-                engine = new SearchEngine ();
-                engine.register_provider (new DmenuProvider ((owned) dmenu_lines, (selected) => {
-                    stdout.printf ("%s\n", selected);
-                    stdout.flush ();
-                    this.quit ();
-                }));
-                return;
-            }
-
-            // Detect desktop bridge
+            // Detect desktop bridge (Pantheon is primary)
             var de = DesktopBridge.get_current_desktop ();
-            if (de == DesktopEnvironment.PANTHEON) {
-                desktop_bridge = new PantheonBridge ();
-            } else {
+            if (de == DesktopEnvironment.GNOME) {
                 desktop_bridge = new GnomeBridge ();
+            } else {
+                desktop_bridge = new PantheonBridge ();
             }
 
-            // Init core engine and register providers
+            // Init core search engine and register only core providers
             engine = new SearchEngine ();
             engine.register_provider (new AppProvider ());
             engine.register_provider (new WindowProvider (desktop_bridge));
-            engine.register_provider (new ClipboardProvider ());
             engine.register_provider (new CalcProvider ());
-            engine.register_provider (new ScriptProvider ());
+
+            this.hold (); // Keep application background daemon alive
         }
 
         protected override void activate () {
             if (window == null) {
-                window = new LauncherWindow (this, engine);
+                window = new LauncherWindow (engine);
             }
             window.present ();
         }
 
         public override int command_line (ApplicationCommandLine command_line) {
             string[] args = command_line.get_arguments ();
-            
+
             for (int i = 1; i < args.length; i++) {
                 string arg = args[i];
                 if (arg == "--toggle" || arg == "-t") {
@@ -80,11 +66,20 @@ namespace Vicinae {
                     }
                     quit ();
                     return 0;
+                } else if (arg == "--background" || arg == "-b" || arg == "--daemon") {
+                    // Daemon mode: stay resident in background without opening window
+                    return 0;
                 } else if (arg == "--help" || arg == "-h") {
-                    command_line.print ("Usage:\n  vicinae [OPTIONS]\n\nOptions:\n  -t, --toggle    Toggle launcher palette\n  -q, --quit      Quit launcher daemon\n  -d, --dmenu     Run in dmenu stdin/stdout pipe mode\n  -v, --version   Show version information\n  -h, --help      Show this help message\n");
+                    command_line.print ("Поиск (Poisk) — быстрый лаунчер для Pantheon и Linux\n\nИспользование:\n  poisk [ОПЦИИ]\n\nОпции:\n  -t, --toggle        Показать / скрыть палитру поиска\n  -b, --background    Запустить в фоновом режиме (демон)\n  -q, --quit          Завершить фоновый процесс лаунчера\n  -v, --version       Показать версию\n  -h, --help          Показать эту справку\n");
+                    if (window == null) {
+                        this.quit ();
+                    }
                     return 0;
                 } else if (arg == "--version" || arg == "-v") {
-                    command_line.print ("Vicinae (Vala Native Edition) 0.1.0\n");
+                    command_line.print ("Poisk 1.0.0\nhttps://github.com/mrlogiousbanana/poisk\nОсновано на концепциях Vicinae (https://github.com/vicinaehq/vicinae)\n");
+                    if (window == null) {
+                        this.quit ();
+                    }
                     return 0;
                 }
             }
@@ -94,28 +89,7 @@ namespace Vicinae {
         }
 
         public static int main (string[] args) {
-            bool dmenu = false;
-            foreach (string arg in args) {
-                if (arg == "--dmenu" || arg == "-d") {
-                    dmenu = true;
-                    break;
-                }
-            }
-
-            if (dmenu) {
-                dmenu_lines = new GLib.List<string> ();
-                string? line;
-                while ((line = stdin.read_line ()) != null) {
-                    string trimmed = line.strip ();
-                    if (trimmed.length > 0) {
-                        dmenu_lines.append (trimmed);
-                    }
-                }
-                var app = new Application (true);
-                return app.run ({ args[0] });
-            }
-
-            var app = new Application (false);
+            var app = new Application ();
             return app.run (args);
         }
     }

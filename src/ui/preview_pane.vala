@@ -1,7 +1,7 @@
 using Gtk;
-using Vicinae.Core;
+using Poisk.Core;
 
-namespace Vicinae.UI {
+namespace Poisk.UI {
 
     public class PreviewPane : Box {
         private Image icon_img;
@@ -26,6 +26,7 @@ namespace Vicinae.UI {
 
             icon_img = new Image.from_icon_name ("system-run");
             icon_img.pixel_size = 56;
+            icon_img.add_css_class ("vicinae-preview-icon");
             header_box.append (icon_img);
 
             title_lbl = new Label ("");
@@ -52,7 +53,7 @@ namespace Vicinae.UI {
 
             preview_lbl = new Label ("");
             preview_lbl.wrap = true;
-            preview_lbl.use_markup = true;
+            preview_lbl.use_markup = false;
             preview_lbl.halign = Align.START;
             preview_lbl.valign = Align.START;
             preview_lbl.xalign = 0.0f;
@@ -69,6 +70,10 @@ namespace Vicinae.UI {
             this.append (action_lbl);
         }
 
+        public void set_item (SearchItem? item) {
+            update (item);
+        }
+
         public void update (SearchItem? item) {
             if (item == null) {
                 this.visible = false;
@@ -76,7 +81,14 @@ namespace Vicinae.UI {
             }
 
             this.visible = true;
-            icon_img.set_from_icon_name (item.icon_name);
+            var paintable = ResultRow.get_cached_icon (item.icon_name, 56);
+            if (paintable != null) {
+                icon_img.set_from_paintable (paintable);
+            } else if (item.icon_name.has_prefix ("/") && FileUtils.test (item.icon_name, FileTest.EXISTS)) {
+                icon_img.set_from_file (item.icon_name);
+            } else {
+                icon_img.set_from_icon_name (item.icon_name);
+            }
             title_lbl.set_text (item.title);
             category_lbl.set_text (item.category);
 
@@ -88,9 +100,11 @@ namespace Vicinae.UI {
                     preview_lbl.set_text (plain_text);
                     preview_lbl.set_attributes (attr_list);
                 } catch (GLib.Error e) {
+                    preview_lbl.set_attributes (null);
                     preview_lbl.set_text (item.preview_text);
                 }
             } else {
+                preview_lbl.set_attributes (null);
                 preview_lbl.set_text (item.subtitle);
             }
 

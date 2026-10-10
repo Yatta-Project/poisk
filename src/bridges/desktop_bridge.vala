@@ -1,8 +1,10 @@
-namespace Vicinae.Bridges {
+using Poisk.Core;
+
+namespace Poisk.Bridges {
 
     public enum DesktopEnvironment {
-        GNOME,
         PANTHEON,
+        GNOME,
         OTHER
     }
 
@@ -10,9 +12,7 @@ namespace Vicinae.Bridges {
         public abstract string name { get; }
         public abstract bool is_available { get; }
 
-        public signal void clipboard_changed (string text, string source);
-
-        public abstract async List<Vicinae.Core.SearchItem> get_open_windows ();
+        public abstract async List<SearchItem> get_open_windows ();
         public abstract async void activate_window (string window_id);
         public abstract async void close_window (string window_id);
 
@@ -20,10 +20,10 @@ namespace Vicinae.Bridges {
             string? de = Environment.get_variable ("XDG_CURRENT_DESKTOP");
             if (de != null) {
                 string de_lower = de.down ();
-                if ("gnome" in de_lower) return DesktopEnvironment.GNOME;
                 if ("pantheon" in de_lower) return DesktopEnvironment.PANTHEON;
+                if ("gnome" in de_lower) return DesktopEnvironment.GNOME;
             }
-            return DesktopEnvironment.OTHER;
+            return DesktopEnvironment.PANTHEON; // Pantheon is primary
         }
     }
 }

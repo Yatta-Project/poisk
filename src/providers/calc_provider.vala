@@ -1,6 +1,6 @@
-using Vicinae.Core;
+using Poisk.Core;
 
-namespace Vicinae.Providers {
+namespace Poisk.Providers {
 
     public class CalcProvider : Object, SearchProvider {
         public string id { get { return "calc"; } }

@@ -1,0 +1,15 @@
+[Desktop Entry]
+Name=Поиск
+Name[en]=Poisk
+GenericName=Application Launcher
+GenericName[ru]=Лаунчер приложений
+Comment=Fast native launcher and productivity palette for Pantheon and Linux
+Comment[ru]=Быстрый нативный лаунчер и командная палитра для Pantheon и Linux
+Exec=poisk --toggle
+Icon=system-search
+Terminal=false
+Type=Application
+Categories=Utility;Core;
+Keywords=launcher;command;palette;search;calculator;poisk;поиск;
+StartupNotify=false
+SingleMainWindow=true

@@ -1,7 +1,7 @@
 using Gtk;
-using Vicinae.Core;
+using Poisk.Core;
 
-namespace Vicinae.UI {
+namespace Poisk.UI {
 
     public class AppGridItem : FlowBoxChild {
         public SearchItem item { get; private set; }
@@ -10,21 +10,30 @@ namespace Vicinae.UI {
             this.item = item;
             this.add_css_class ("vicinae-grid-card");
 
-            var box = new Box (Orientation.VERTICAL, 8);
+            var box = new Box (Orientation.VERTICAL, 6);
             box.halign = Align.CENTER;
             box.valign = Align.CENTER;
-            box.margin_top = 12;
-            box.margin_bottom = 12;
-            box.margin_start = 10;
-            box.margin_end = 10;
+            box.margin_top = 8;
+            box.margin_bottom = 8;
+            box.margin_start = 6;
+            box.margin_end = 6;
 
-            var icon_img = new Image.from_icon_name (item.icon_name);
-            icon_img.pixel_size = 52;
+            Image icon_img;
+            var paintable = ResultRow.get_cached_icon (item.icon_name, 48);
+            if (paintable != null) {
+                icon_img = new Image.from_paintable (paintable);
+            } else if (item.icon_name.has_prefix ("/") && FileUtils.test (item.icon_name, FileTest.EXISTS)) {
+                icon_img = new Image.from_file (item.icon_name);
+            } else {
+                icon_img = new Image.from_icon_name (item.icon_name);
+            }
+            icon_img.pixel_size = 48;
+            icon_img.add_css_class ("vicinae-grid-icon");
             box.append (icon_img);
 
             var label = new Label (item.title);
             label.add_css_class ("caption");
-            label.max_width_chars = 12;
+            label.max_width_chars = 11;
             label.ellipsize = Pango.EllipsizeMode.END;
             label.justify = Justification.CENTER;
             label.wrap = false;
@@ -51,15 +60,15 @@ namespace Vicinae.UI {
 
             flow_box = new FlowBox ();
             flow_box.selection_mode = SelectionMode.SINGLE;
-            flow_box.max_children_per_line = 5;
-            flow_box.min_children_per_line = 4;
+            flow_box.max_children_per_line = 6;
+            flow_box.min_children_per_line = 5;
             flow_box.homogeneous = true;
-            flow_box.column_spacing = 16;
-            flow_box.row_spacing = 16;
-            flow_box.margin_start = 24;
-            flow_box.margin_end = 24;
-            flow_box.margin_top = 20;
-            flow_box.margin_bottom = 20;
+            flow_box.column_spacing = 10;
+            flow_box.row_spacing = 10;
+            flow_box.margin_start = 16;
+            flow_box.margin_end = 16;
+            flow_box.margin_top = 12;
+            flow_box.margin_bottom = 16;
             flow_box.halign = Align.CENTER;
             flow_box.valign = Align.START;
 
@@ -82,13 +91,9 @@ namespace Vicinae.UI {
                 child = next;
             }
 
-            int count = 0;
             foreach (var item in items) {
-                // Show top 15 frequently used apps in grid
-                if (count >= 15) break;
                 var card = new AppGridItem (item);
                 flow_box.append (card);
-                count++;
             }
 
             var first = flow_box.get_child_at_index (0);
