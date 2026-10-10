@@ -89,6 +89,7 @@ namespace Poisk {
         }
 
         public static int main (string[] args) {
+            GLib.Environment.set_variable ("GDK_BACKEND", "x11", true);
             var app = new Application ();
             return app.run (args);
         }

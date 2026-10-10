@@ -42,24 +42,10 @@ namespace Poisk.UI {
             snapshot.push_blur (blur_radius);
             snapshot.append_paste (rect, 0);
 
-            // 3. Tint color layer
-            var tint = Gdk.RGBA ();
-            if (custom_tint_color != null && tint.parse (custom_tint_color)) {
-                // used custom
-            } else {
-                bool is_dark = Adw.StyleManager.get_default ().dark;
-                if (is_dark) {
-                    tint.parse ("rgba(28, 28, 33, 0.72)");
-                } else {
-                    tint.parse ("rgba(250, 250, 252, 0.72)");
-                }
-            }
-            snapshot.append_color (tint, rect);
-
             snapshot.pop (); // blur
             snapshot.pop (); // copy
 
-            // 4. Render children widgets
+            // 3. Render background and children widgets according to CSS dock styling
             base.snapshot (snapshot);
 
             snapshot.pop (); // rounded_clip

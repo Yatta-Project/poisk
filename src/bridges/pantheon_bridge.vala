@@ -23,6 +23,19 @@ namespace Poisk.Bridges {
 
         public PantheonBridge () {
             init_gala.begin ();
+            setup_super_key_binding ();
+        }
+
+        private void setup_super_key_binding () {
+            var schema_source = SettingsSchemaSource.get_default ();
+            var schema = schema_source.lookup ("io.elementary.desktop.wm.behavior", true);
+            if (schema != null && schema.has_key ("overlay-action")) {
+                var settings = new GLib.Settings ("io.elementary.desktop.wm.behavior");
+                string current_action = settings.get_string ("overlay-action");
+                if (current_action != "poisk --toggle") {
+                    settings.set_string ("overlay-action", "poisk --toggle");
+                }
+            }
         }
 
         private async void init_gala () {

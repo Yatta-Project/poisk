@@ -119,6 +119,16 @@ int main(void) {
     signal(SIGTERM, handle_signal);
     signal(SIGCHLD, SIG_IGN);
 
+    const char *desktop = getenv("XDG_CURRENT_DESKTOP");
+    if (desktop && (strstr(desktop, "Pantheon") || strstr(desktop, "pantheon"))) {
+        // Gala handles Super key natively via io.elementary.desktop.wm.behavior overlay-action.
+        // Sleep to avoid duplicate triggers while keeping service healthy.
+        while (running) {
+            sleep(60);
+        }
+        return 0;
+    }
+
     rescan_devices();
 
     struct pollfd pfd[MAX_DEVICES];

@@ -68,15 +68,6 @@ namespace Poisk.UI {
             snapshot.push_blur (blur_radius);
             snapshot.append_paste (rect, 0);
 
-            var tint = Gdk.RGBA ();
-            bool is_dark = Adw.StyleManager.get_default ().dark;
-            if (is_dark) {
-                tint.parse ("rgba(28, 28, 33, 0.72)");
-            } else {
-                tint.parse ("rgba(250, 250, 252, 0.72)");
-            }
-            snapshot.append_color (tint, rect);
-
             snapshot.pop (); // blur
             snapshot.pop (); // copy
 

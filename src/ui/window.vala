@@ -15,6 +15,7 @@ namespace Poisk.UI {
 
         private SearchEngine engine;
         private Box root_box;
+        private SystemBubble system_bubble;
         private FrostedBox capsule_box;
         private PillHeader pill_header;
         private Box results_card;
@@ -51,8 +52,12 @@ namespace Poisk.UI {
 
             this.map.connect (() => {
                 set_skip_taskbar (this);
-                int cur_h = (current_mode == WindowMode.CAPSULE) ? 152 : 546;
-                resize_and_center_window (this, 846, cur_h);
+                int cur_h = (current_mode == WindowMode.CAPSULE) ? 156 : 548;
+                resize_and_center_window (this, 848, cur_h);
+                GLib.Timeout.add (25, () => {
+                    resize_and_center_window (this, 848, cur_h);
+                    return GLib.Source.REMOVE;
+                });
             });
 
             // Focus on show, auto-hide on focus loss
@@ -62,6 +67,9 @@ namespace Poisk.UI {
                 } else if (this.visible) {
                     GLib.Timeout.add (120, () => {
                         if (!this.is_active && this.visible) {
+                            if (system_bubble != null && system_bubble.is_popover_open ()) {
+                                return GLib.Source.REMOVE;
+                            }
                             this.set_visible (false);
                         }
                         return GLib.Source.REMOVE;
@@ -105,6 +113,9 @@ namespace Poisk.UI {
 
         public void set_frosted_enabled (bool enabled) {
             capsule_box.frosted = enabled;
+            if (system_bubble != null) {
+                system_bubble.set_frosted (enabled);
+            }
             if (enabled) {
                 capsule_box.remove_css_class ("reduce-transparency");
                 this.remove_css_class ("reduce-transparency");
@@ -125,9 +136,9 @@ namespace Poisk.UI {
                     pill_header.remove_css_class ("expanded-header");
                     this.remove_css_class ("expanded-card");
                     capsule_box.remove_css_class ("expanded-card");
-                    capsule_box.set_size_request (680, 56);
+                    capsule_box.set_size_request (680, 58);
 
-                    resize_and_center_window (this, 846, 152);
+                    resize_and_center_window (this, 848, 156);
                     break;
 
                 case WindowMode.RESULTS:
@@ -139,7 +150,7 @@ namespace Poisk.UI {
                     capsule_box.add_css_class ("expanded-card");
                     capsule_box.set_size_request (680, 444);
 
-                    resize_and_center_window (this, 846, 546);
+                    resize_and_center_window (this, 848, 548);
                     break;
 
                 case WindowMode.MENU:
@@ -151,13 +162,14 @@ namespace Poisk.UI {
                     capsule_box.add_css_class ("expanded-card");
                     capsule_box.set_size_request (680, 444);
 
-                    resize_and_center_window (this, 846, 546);
+                    resize_and_center_window (this, 848, 548);
                     break;
             }
         }
 
         private void setup_ui () {
-            root_box = new Box (Orientation.HORIZONTAL, 0);
+            root_box = new Box (Orientation.HORIZONTAL, 14);
+            root_box.add_css_class ("poisk-root");
             root_box.valign = Align.START;
             root_box.halign = Align.CENTER;
             root_box.margin_start = 48;
@@ -165,7 +177,14 @@ namespace Poisk.UI {
             root_box.margin_top = 40;
             root_box.margin_bottom = 56;
 
-            // Main Card (dock blur background)
+            // 1. Left Detached System Squircle
+            system_bubble = new SystemBubble ();
+            system_bubble.action_triggered.connect (() => {
+                this.set_visible (false);
+            });
+            root_box.append (system_bubble);
+
+            // 2. Main Search Card (dock blur background)
             capsule_box = new FrostedBox (Orientation.VERTICAL, 0);
             capsule_box.frosted = true;
             capsule_box.blur_radius = 24.0;
@@ -350,20 +369,87 @@ namespace Poisk.UI {
                     padding: 0;
                     margin: 0;
                 }
+                .poisk-root {
+                    background: transparent;
+                }
 
-                /* Elementary Dock-like unified card with highlights and borders */
-                .poisk-capsule {
-                    background: alpha(@bg_color, 0.80);
-                    box-shadow:
-                        inset 0 -1px 0 0 alpha(@highlight_color, 0.40),
-                        inset 0 1px 0 0 alpha(@highlight_color, 0.60),
-                        inset 1px 0 0 0 alpha(@highlight_color, 0.14),
-                        inset -1px 0 0 0 alpha(@highlight_color, 0.14),
-                        0 0 0 1px @borders,
-                        0 8px 26px alpha(black, 0.28),
-                        0 2px 6px alpha(black, 0.18);
+                /* Satellite bubble and System button - identical to dock style */
+                .satellite-bubble,
+                .system-bubble-btn {
                     border-radius: 16px;
+                    background-color: transparent;
+                    background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.84), rgba(235, 235, 235, 0.84));
+                    border: 1px solid rgba(0, 0, 0, 0.18);
+                    box-shadow:
+                        inset 0 1px 0 0 rgba(255, 255, 255, 0.96),
+                        inset 0 -1px 0 0 rgba(0, 0, 0, 0.04),
+                        0 8px 24px rgba(0, 0, 0, 0.16),
+                        0 2px 6px rgba(0, 0, 0, 0.08);
+                    padding: 0;
+                    min-width: 54px;
+                    min-height: 54px;
+                    transition: all 180ms cubic-bezier(0.25, 0.8, 0.25, 1);
+                }
+                .satellite-bubble:hover,
+                .system-bubble-btn:hover {
+                    background-color: transparent;
+                    background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.94), rgba(240, 240, 240, 0.94));
+                    border-color: alpha(@accent_color, 0.55);
+                    box-shadow:
+                        inset 0 1px 0 0 rgba(255, 255, 255, 0.98),
+                        0 10px 32px rgba(0, 0, 0, 0.22),
+                        0 3px 8px rgba(0, 0, 0, 0.12);
+                    transform: scale(1.04);
+                }
+                .reduce-transparency .system-bubble-btn,
+                .system-bubble-btn.reduce-transparency {
+                    background-image: none;
+                    background-color: @bg_color;
+                    opacity: 1.0;
+                }
+
+                /* System flyout menu */
+                .system-flyout-popover contents {
+                    background-color: transparent;
+                    background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.95), rgba(242, 242, 244, 0.95));
+                    border-radius: 14px;
+                    border: 1px solid rgba(0, 0, 0, 0.18);
+                    box-shadow:
+                        inset 0 1px 0 rgba(255, 255, 255, 0.9),
+                        0 12px 36px rgba(0, 0, 0, 0.25);
+                    padding: 6px;
+                }
+                .system-flyout-title {
+                    font-weight: 700;
+                    font-size: 11px;
+                    opacity: 0.6;
+                    margin: 4px 8px 2px 8px;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                }
+                .system-flyout-item {
+                    border-radius: 8px;
+                    padding: 6px 10px;
+                    background: transparent;
                     border: none;
+                    box-shadow: none;
+                    transition: background 120ms ease;
+                }
+                .system-flyout-item:hover {
+                    background: alpha(currentColor, 0.08);
+                }
+
+                /* Elementary Dock-like unified capsule with exact colors */
+                .poisk-capsule {
+                    background-color: transparent;
+                    background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.84), rgba(235, 235, 235, 0.84));
+                    border: 1px solid rgba(0, 0, 0, 0.18);
+                    box-shadow:
+                        inset 0 1px 0 0 rgba(255, 255, 255, 0.96),
+                        inset 0 -1px 0 0 rgba(0, 0, 0, 0.04),
+                        0 10px 32px rgba(0, 0, 0, 0.18),
+                        0 2px 8px rgba(0, 0, 0, 0.08);
+                    border-radius: 18px;
                     padding: 0;
                     margin: 0;
                     min-height: 56px;
@@ -372,6 +458,7 @@ namespace Poisk.UI {
 
                 .reduce-transparency .poisk-capsule,
                 .poisk-capsule.reduce-transparency {
+                    background-image: none;
                     background: @bg_color;
                     opacity: 1.0;
                 }
@@ -379,13 +466,51 @@ namespace Poisk.UI {
                 .poisk-capsule.expanded-card {
                     border-radius: 18px;
                     box-shadow:
-                        inset 0 -1px 0 0 alpha(@highlight_color, 0.40),
-                        inset 0 1px 0 0 alpha(@highlight_color, 0.60),
-                        inset 1px 0 0 0 alpha(@highlight_color, 0.14),
-                        inset -1px 0 0 0 alpha(@highlight_color, 0.14),
-                        0 0 0 1px @borders,
-                        0 14px 42px alpha(black, 0.35),
-                        0 4px 10px alpha(black, 0.20);
+                        inset 0 1px 0 0 rgba(255, 255, 255, 0.96),
+                        inset 0 -1px 0 0 rgba(0, 0, 0, 0.05),
+                        0 16px 44px rgba(0, 0, 0, 0.24),
+                        0 4px 12px rgba(0, 0, 0, 0.12);
+                }
+
+                /* Dark Theme adaptation matching plank-dark/dock.theme */
+                @media (prefers-color-scheme: dark) {
+                    .poisk-capsule,
+                    .satellite-bubble,
+                    .system-bubble-btn {
+                        background-color: transparent;
+                        background-image: linear-gradient(to bottom, rgba(44, 44, 44, 0.84), rgba(55, 55, 55, 0.84));
+                        border: 1px solid rgba(0, 0, 0, 0.37);
+                        box-shadow:
+                            inset 0 1px 0 0 rgba(180, 180, 180, 0.50),
+                            inset 0 -1px 0 0 rgba(0, 0, 0, 0.40),
+                            0 12px 36px rgba(0, 0, 0, 0.45),
+                            0 4px 10px rgba(0, 0, 0, 0.25);
+                    }
+
+                    .satellite-bubble:hover,
+                    .system-bubble-btn:hover {
+                        background-image: linear-gradient(to bottom, rgba(56, 56, 56, 0.92), rgba(68, 68, 68, 0.92));
+                        border-color: alpha(@accent_color, 0.60);
+                        box-shadow:
+                            inset 0 1px 0 0 rgba(210, 210, 210, 0.65),
+                            0 14px 40px rgba(0, 0, 0, 0.50);
+                    }
+
+                    .system-flyout-popover contents {
+                        background-image: linear-gradient(to bottom, rgba(48, 50, 56, 0.95), rgba(36, 38, 44, 0.95));
+                        border: 1px solid rgba(255, 255, 255, 0.12);
+                        box-shadow:
+                            inset 0 1px 0 rgba(255, 255, 255, 0.15),
+                            0 16px 48px rgba(0, 0, 0, 0.55);
+                    }
+
+                    .poisk-capsule.expanded-card {
+                        box-shadow:
+                            inset 0 1px 0 0 rgba(180, 180, 180, 0.50),
+                            inset 0 -1px 0 0 rgba(0, 0, 0, 0.40),
+                            0 16px 48px rgba(0, 0, 0, 0.55),
+                            0 5px 14px rgba(0, 0, 0, 0.30);
+                    }
                 }
 
                 /* Header */
