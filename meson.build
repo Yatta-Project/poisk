@@ -51,6 +51,8 @@ sources = files(
   'src/ui/result_row.vala',
   'src/ui/preview_pane.vala',
   'src/ui/app_grid.vala',
+  'src/ui/settings_view.vala',
+  'src/ui/preferences_window.vala',
   'src/ui/window.vala',
   'src/ui/x11_utils.c',
 )
@@ -79,6 +81,32 @@ executable('poisk-superd',
   files('src/daemon/superd.c'),
   install: true,
 )
+
+switchboard_dep = dependency('switchboard-3', required: false)
+gee_dep = dependency('gee-0.8', required: false)
+
+if switchboard_dep.found() and gee_dep.found()
+  switchboard_plugsdir = get_option('libdir') / 'switchboard-3'
+
+  shared_module('poisk',
+    files(
+      'src/switchboard/plug.vala',
+      'src/ui/settings_view.vala',
+    ),
+    dependencies: [
+      glib_dep,
+      gobject_dep,
+      gio_dep,
+      gtk_dep,
+      adw_dep,
+      granite_dep,
+      gee_dep,
+      switchboard_dep,
+    ],
+    install: true,
+    install_dir: switchboard_plugsdir / 'personal',
+  )
+endif
 
 install_data(
   'data/io.github.mrlogiousbanana.poisk.desktop',

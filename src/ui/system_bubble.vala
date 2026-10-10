@@ -69,9 +69,14 @@ namespace Poisk.UI {
             var sep = new Separator (Orientation.HORIZONTAL);
             box.append (sep);
 
-            // 1. Settings / Switchboard
+            // 1. Poisk Settings
+            box.append (create_item ("system-search-symbolic", "Параметры Поиска", () => {
+                execute_cmd ("io.elementary.settings settings://poisk || poisk --preferences");
+            }));
+
+            // 2. Settings / Switchboard
             box.append (create_item ("preferences-system-symbolic", "Параметры системы", () => {
-                execute_cmd ("io.elementary.switchboard || gnome-control-center || systemsettings");
+                execute_cmd ("io.elementary.settings || io.elementary.switchboard || gnome-control-center || systemsettings");
             }));
 
             // 2. Lock screen

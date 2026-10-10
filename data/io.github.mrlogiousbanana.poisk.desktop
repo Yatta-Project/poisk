@@ -13,3 +13,10 @@ Categories=Utility;Core;
 Keywords=launcher;command;palette;search;calculator;poisk;поиск;
 StartupNotify=false
 SingleMainWindow=true
+Actions=preferences;
+
+[Desktop Action preferences]
+Name=Параметры
+Name[en]=Preferences
+Exec=io.elementary.settings settings://poisk
+Icon=preferences-system

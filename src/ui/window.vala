@@ -29,6 +29,7 @@ namespace Poisk.UI {
         private Box footer_box;
         private Cancellable? current_search_cancellable = null;
         private GLib.Settings? transparency_settings = null;
+        private GLib.Settings? poisk_settings = null;
         private int target_window_height = 624;
 
         public LauncherWindow (SearchEngine engine) {
@@ -134,26 +135,37 @@ namespace Poisk.UI {
         }
 
         private void setup_system_transparency () {
-            // Adapt to elementary OS transparency settings
             var schema_source = SettingsSchemaSource.get_default ();
-            var schema = schema_source.lookup ("io.elementary.desktop.wingpanel", true);
-            if (schema != null && schema.has_key ("use-transparency")) {
-                transparency_settings = new GLib.Settings ("io.elementary.desktop.wingpanel");
-                transparency_settings.changed["use-transparency"].connect (() => {
+            if (schema_source != null && schema_source.lookup ("io.github.mrlogiousbanana.poisk", true) != null) {
+                poisk_settings = new GLib.Settings ("io.github.mrlogiousbanana.poisk");
+                poisk_settings.changed["enable-frosted-glass"].connect (() => {
                     update_transparency_mode ();
                 });
-                update_transparency_mode ();
-            } else {
-                // Default: enable blur effect
-                set_frosted_enabled (true);
             }
+
+            if (schema_source != null) {
+                var schema = schema_source.lookup ("io.elementary.desktop.wingpanel", true);
+                if (schema != null && schema.has_key ("use-transparency")) {
+                    transparency_settings = new GLib.Settings ("io.elementary.desktop.wingpanel");
+                    transparency_settings.changed["use-transparency"].connect (() => {
+                        update_transparency_mode ();
+                    });
+                }
+            }
+
+            update_transparency_mode ();
         }
 
         private void update_transparency_mode () {
+            bool use_trans = true;
             if (transparency_settings != null) {
-                bool use_trans = transparency_settings.get_boolean ("use-transparency");
-                set_frosted_enabled (use_trans);
+                use_trans = transparency_settings.get_boolean ("use-transparency");
             }
+            if (poisk_settings != null) {
+                bool poisk_blur = poisk_settings.get_boolean ("enable-frosted-glass");
+                use_trans = use_trans && poisk_blur;
+            }
+            set_frosted_enabled (use_trans);
         }
 
         public void set_frosted_enabled (bool enabled) {
@@ -705,10 +717,14 @@ namespace Poisk.UI {
                 child = next;
             }
 
-            // Populate results (cap at 30 to keep UI instant)
+            // Populate results (cap according to max-results setting)
+            int max_limit = 30;
+            if (poisk_settings != null) {
+                max_limit = poisk_settings.get_int ("max-results");
+            }
             int count = 0;
             foreach (var item in items) {
-                if (count >= 30) break;
+                if (count >= max_limit) break;
                 var row = new ResultRow (item);
                 result_list.append (row);
                 count++;

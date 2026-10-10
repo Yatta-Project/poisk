@@ -9,6 +9,8 @@ pkgs.mkShell {
     gtk4
     libadwaita
     pantheon.granite7
+    pantheon.switchboard
+    libgee
     json-glib
     sqlite
     libx11

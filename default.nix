@@ -4,7 +4,12 @@ pkgs.stdenv.mkDerivation rec {
   pname = "poisk";
   version = "1.0.0";
 
-  src = ./.;
+  src = pkgs.lib.cleanSourceWith {
+    src = ./.;
+    filter = path: type:
+      let base = baseNameOf (toString path);
+      in !(base == "build" || base == ".git" || base == "result");
+  };
 
   nativeBuildInputs = with pkgs; [
     meson
@@ -18,6 +23,8 @@ pkgs.stdenv.mkDerivation rec {
     gtk4
     libadwaita
     pantheon.granite7
+    pantheon.switchboard
+    libgee
     json-glib
     sqlite
     libx11

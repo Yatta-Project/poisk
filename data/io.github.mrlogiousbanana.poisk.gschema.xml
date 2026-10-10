@@ -11,5 +11,25 @@
       <summary>Maximum search results to display</summary>
       <description>Limit of items displayed in the search result list</description>
     </key>
+    <key name="show-app-grid" type="b">
+      <default>true</default>
+      <summary>Show Spotlight App Grid on empty search</summary>
+      <description>Whether to display a grid of frequently used apps when query is empty</description>
+    </key>
+    <key name="enable-apps" type="b">
+      <default>true</default>
+      <summary>Enable Application Provider</summary>
+      <description>Include installed desktop applications in search results</description>
+    </key>
+    <key name="enable-windows" type="b">
+      <default>true</default>
+      <summary>Enable Window Switcher Provider</summary>
+      <description>Include currently open desktop windows in search results</description>
+    </key>
+    <key name="enable-calc" type="b">
+      <default>true</default>
+      <summary>Enable Calculator Provider</summary>
+      <description>Perform on-the-fly math calculations in search results</description>
+    </key>
   </schema>
 </schemalist>

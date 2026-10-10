@@ -19,6 +19,19 @@ namespace Poisk {
             );
         }
 
+        private PoiskPreferencesWindow? prefs_window = null;
+
+        public void show_preferences () {
+            if (prefs_window == null) {
+                prefs_window = new PoiskPreferencesWindow (window);
+                prefs_window.close_request.connect (() => {
+                    prefs_window = null;
+                    return false;
+                });
+            }
+            prefs_window.present ();
+        }
+
         protected override void startup () {
             base.startup ();
             Adw.init ();
@@ -34,9 +47,31 @@ namespace Poisk {
 
             // Init core search engine and register only core providers
             engine = new SearchEngine ();
-            engine.register_provider (new AppProvider ());
-            engine.register_provider (new WindowProvider (desktop_bridge));
-            engine.register_provider (new CalcProvider ());
+            var app_provider = new AppProvider ();
+            var window_provider = new WindowProvider (desktop_bridge);
+            var calc_provider = new CalcProvider ();
+
+            var schema_source = SettingsSchemaSource.get_default ();
+            if (schema_source != null && schema_source.lookup ("io.github.mrlogiousbanana.poisk", true) != null) {
+                var poisk_settings = new GLib.Settings ("io.github.mrlogiousbanana.poisk");
+                app_provider.is_enabled = poisk_settings.get_boolean ("enable-apps");
+                window_provider.is_enabled = poisk_settings.get_boolean ("enable-windows");
+                calc_provider.is_enabled = poisk_settings.get_boolean ("enable-calc");
+
+                poisk_settings.changed["enable-apps"].connect (() => {
+                    app_provider.is_enabled = poisk_settings.get_boolean ("enable-apps");
+                });
+                poisk_settings.changed["enable-windows"].connect (() => {
+                    window_provider.is_enabled = poisk_settings.get_boolean ("enable-windows");
+                });
+                poisk_settings.changed["enable-calc"].connect (() => {
+                    calc_provider.is_enabled = poisk_settings.get_boolean ("enable-calc");
+                });
+            }
+
+            engine.register_provider (app_provider);
+            engine.register_provider (window_provider);
+            engine.register_provider (calc_provider);
 
             this.hold (); // Keep application background daemon alive
         }
@@ -60,6 +95,9 @@ namespace Poisk {
                         activate ();
                     }
                     return 0;
+                } else if (arg == "--preferences" || arg == "-p" || arg == "--settings") {
+                    show_preferences ();
+                    return 0;
                 } else if (arg == "--quit" || arg == "-q") {
                     if (window != null) {
                         window.destroy ();
@@ -70,7 +108,7 @@ namespace Poisk {
                     // Daemon mode: stay resident in background without opening window
                     return 0;
                 } else if (arg == "--help" || arg == "-h") {
-                    command_line.print ("Поиск (Poisk) — быстрый лаунчер для Pantheon и Linux\n\nИспользование:\n  poisk [ОПЦИИ]\n\nОпции:\n  -t, --toggle        Показать / скрыть палитру поиска\n  -b, --background    Запустить в фоновом режиме (демон)\n  -q, --quit          Завершить фоновый процесс лаунчера\n  -v, --version       Показать версию\n  -h, --help          Показать эту справку\n");
+                    command_line.print ("Поиск (Poisk) — быстрый лаунчер для Pantheon и Linux\n\nИспользование:\n  poisk [ОПЦИИ]\n\nОпции:\n  -t, --toggle        Показать / скрыть палитру поиска\n  -p, --preferences   Открыть параметры Поиска\n  -b, --background    Запустить в фоновом режиме (демон)\n  -q, --quit          Завершить фоновый процесс лаунчера\n  -v, --version       Показать версию\n  -h, --help          Показать эту справку\n");
                     if (window == null) {
                         this.quit ();
                     }
