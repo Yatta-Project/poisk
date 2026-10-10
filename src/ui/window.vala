@@ -14,6 +14,7 @@ namespace Poisk.UI {
         private WindowMode current_mode = WindowMode.CAPSULE;
 
         private SearchEngine engine;
+        private Box window_container;
         private Box root_box;
         private SystemBubble system_bubble;
         private FrostedBox capsule_box;
@@ -28,14 +29,16 @@ namespace Poisk.UI {
         private Box footer_box;
         private Cancellable? current_search_cancellable = null;
         private GLib.Settings? transparency_settings = null;
+        private int target_window_height = 624;
 
         public LauncherWindow (SearchEngine engine) {
             Object ();
             this.engine = engine;
 
             this.title = "Поиск";
-            this.set_default_size (846, 152);
-            this.resizable = true;
+            target_window_height = get_target_window_height ();
+            this.set_default_size (848, target_window_height);
+            this.resizable = false;
             this.decorated = false; // Borderless floating window
             this.modal = true;
             this.set_hide_on_close (true);
@@ -43,6 +46,7 @@ namespace Poisk.UI {
 
             setup_ui ();
             setup_key_handling ();
+            setup_click_dismiss ();
             setup_css ();
             setup_system_transparency ();
 
@@ -52,12 +56,6 @@ namespace Poisk.UI {
 
             this.map.connect (() => {
                 set_skip_taskbar (this);
-                int cur_h = (current_mode == WindowMode.CAPSULE) ? 156 : 548;
-                resize_and_center_window (this, 848, cur_h);
-                GLib.Timeout.add (25, () => {
-                    resize_and_center_window (this, 848, cur_h);
-                    return GLib.Source.REMOVE;
-                });
             });
 
             // Focus on show, auto-hide on focus loss
@@ -86,6 +84,53 @@ namespace Poisk.UI {
             });
 
             switch_mode (WindowMode.CAPSULE);
+        }
+
+        private int get_target_window_height () {
+            int monitor_h = 960;
+            var display = Gdk.Display.get_default ();
+            if (display != null) {
+                var monitors = display.get_monitors ();
+                if (monitors.get_n_items () > 0) {
+                    var monitor = (Gdk.Monitor) monitors.get_item (0);
+                    if (monitor != null) {
+                        var geom = monitor.get_geometry ();
+                        if (geom.height > 0) {
+                            monitor_h = geom.height;
+                        }
+                    }
+                }
+            }
+            int target_h = (int) (monitor_h * 0.60f + 48.0f);
+            if (target_h < 560) target_h = 560;
+            if (target_h > 720) target_h = 720;
+            return target_h;
+        }
+
+        private void setup_click_dismiss () {
+            var click_controller = new GestureClick ();
+            click_controller.pressed.connect ((n_press, x, y) => {
+                double cap_x = 0, cap_y = 0;
+                capsule_box.translate_coordinates (window_container, 0, 0, out cap_x, out cap_y);
+                int cap_w = capsule_box.get_width ();
+                int cap_h = capsule_box.get_height ();
+
+                double bub_x = 0, bub_y = 0;
+                int bub_w = 0, bub_h = 0;
+                if (system_bubble != null) {
+                    system_bubble.translate_coordinates (window_container, 0, 0, out bub_x, out bub_y);
+                    bub_w = system_bubble.get_width ();
+                    bub_h = system_bubble.get_height ();
+                }
+
+                bool in_capsule = (x >= cap_x && x <= cap_x + cap_w && y >= cap_y && y <= cap_y + cap_h);
+                bool in_bubble = (system_bubble != null && x >= bub_x && x <= bub_x + bub_w && y >= bub_y && y <= bub_y + bub_h);
+
+                if (!in_capsule && !in_bubble) {
+                    this.set_visible (false);
+                }
+            });
+            window_container.add_controller (click_controller);
         }
 
         private void setup_system_transparency () {
@@ -137,8 +182,6 @@ namespace Poisk.UI {
                     this.remove_css_class ("expanded-card");
                     capsule_box.remove_css_class ("expanded-card");
                     capsule_box.set_size_request (680, 58);
-
-                    resize_and_center_window (this, 848, 156);
                     break;
 
                 case WindowMode.RESULTS:
@@ -149,8 +192,6 @@ namespace Poisk.UI {
                     this.add_css_class ("expanded-card");
                     capsule_box.add_css_class ("expanded-card");
                     capsule_box.set_size_request (680, 444);
-
-                    resize_and_center_window (this, 848, 548);
                     break;
 
                 case WindowMode.MENU:
@@ -161,21 +202,27 @@ namespace Poisk.UI {
                     this.add_css_class ("expanded-card");
                     capsule_box.add_css_class ("expanded-card");
                     capsule_box.set_size_request (680, 444);
-
-                    resize_and_center_window (this, 848, 548);
                     break;
             }
         }
 
         private void setup_ui () {
+            window_container = new Box (Orientation.VERTICAL, 0);
+            window_container.add_css_class ("poisk-window-container");
+            window_container.valign = Align.FILL;
+            window_container.halign = Align.FILL;
+            window_container.hexpand = true;
+            window_container.vexpand = true;
+            window_container.set_size_request (848, target_window_height);
+
             root_box = new Box (Orientation.HORIZONTAL, 14);
             root_box.add_css_class ("poisk-root");
             root_box.valign = Align.START;
             root_box.halign = Align.CENTER;
             root_box.margin_start = 48;
             root_box.margin_end = 48;
-            root_box.margin_top = 40;
-            root_box.margin_bottom = 56;
+            root_box.margin_top = 24;
+            root_box.margin_bottom = 24;
 
             // 1. Left Detached System Squircle
             system_bubble = new SystemBubble ();
@@ -287,7 +334,8 @@ namespace Poisk.UI {
             capsule_box.append (menu_card);
 
             root_box.append (capsule_box);
-            this.set_child (root_box);
+            window_container.append (root_box);
+            this.set_child (window_container);
         }
 
         private void on_header_activate () {
@@ -369,8 +417,10 @@ namespace Poisk.UI {
                     padding: 0;
                     margin: 0;
                 }
+                .poisk-window-container,
                 .poisk-root {
                     background: transparent;
+                    background-color: transparent;
                 }
 
                 /* Satellite bubble and System button - identical to dock style */
