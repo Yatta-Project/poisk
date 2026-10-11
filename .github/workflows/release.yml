@@ -19,7 +19,7 @@ jobs:
       - name: Install dependencies
         run: |
           dnf install -y \
-            meson ninja-build gcc vala pkgconfig \
+            meson ninja-build gcc vala pkgconfig sassc \
             glib2-devel gobject-introspection-devel libgee-devel \
             gtk4-devel libadwaita-devel \
             json-glib-devel sqlite-devel wayland-devel \
