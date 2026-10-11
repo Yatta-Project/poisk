@@ -51,6 +51,7 @@ sources = files(
   'src/bridges/desktop_bridge.vala',
   'src/bridges/gnome_bridge.vala',
   'src/bridges/pantheon_bridge.vala',
+  'src/bridges/cinnamon_bridge.vala',
   'src/providers/app_provider.vala',
   'src/providers/window_provider.vala',
   'src/providers/calc_provider.vala',

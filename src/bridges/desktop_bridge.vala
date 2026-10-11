@@ -5,6 +5,7 @@ namespace Poisk.Bridges {
     public enum DesktopEnvironment {
         PANTHEON,
         GNOME,
+        CINNAMON,
         OTHER
     }
 
@@ -21,9 +22,10 @@ namespace Poisk.Bridges {
             if (de != null) {
                 string de_lower = de.down ();
                 if ("pantheon" in de_lower) return DesktopEnvironment.PANTHEON;
+                if ("cinnamon" in de_lower) return DesktopEnvironment.CINNAMON;
                 if ("gnome" in de_lower) return DesktopEnvironment.GNOME;
             }
-            return DesktopEnvironment.PANTHEON; // Pantheon is primary
+            return DesktopEnvironment.OTHER;
         }
     }
 }

@@ -51,10 +51,12 @@ namespace Poisk {
             Adw.init ();
             Granite.init ();
 
-            // Detect desktop bridge (Pantheon is primary)
+            // Detect desktop bridge
             var de = DesktopBridge.get_current_desktop ();
             if (de == DesktopEnvironment.GNOME) {
                 desktop_bridge = new GnomeBridge ();
+            } else if (de == DesktopEnvironment.CINNAMON) {
+                desktop_bridge = new CinnamonBridge ();
             } else {
                 desktop_bridge = new PantheonBridge ();
             }
@@ -145,7 +147,11 @@ namespace Poisk {
         }
 
         public static int main (string[] args) {
-            GLib.Environment.set_variable ("GDK_BACKEND", "wayland", true);
+            // Prioritize Wayland on Wayland compositors (Pantheon, GNOME Wayland),
+            // but seamlessly fallback to X11 on X11 environments (Cinnamon, GNOME on Xorg, etc.)
+            if (GLib.Environment.get_variable ("GDK_BACKEND") == null) {
+                GLib.Environment.set_variable ("GDK_BACKEND", "wayland,x11,*", false);
+            }
             var app = new Application ();
             return app.run (args);
         }
