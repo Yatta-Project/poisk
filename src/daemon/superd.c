@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -20,6 +21,12 @@ static void handle_signal(int sig) {
     running = 0;
 }
 
+static uint64_t get_time_ms(void) {
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (uint64_t)ts.tv_sec * 1000 + (uint64_t)ts.tv_nsec / 1000000;
+}
+
 static int is_keyboard_device(int fd) {
     unsigned long evbits[(EV_MAX + sizeof(long) * 8 - 1) / (sizeof(long) * 8)] = {0};
     if (ioctl(fd, EVIOCGBIT(0, sizeof(evbits)), evbits) < 0) return 0;
@@ -28,8 +35,8 @@ static int is_keyboard_device(int fd) {
     unsigned long keybits[(KEY_MAX + sizeof(long) * 8 - 1) / (sizeof(long) * 8)] = {0};
     if (ioctl(fd, EVIOCGBIT(EV_KEY, sizeof(keybits)), keybits) < 0) return 0;
 
-    int has_meta = (keybits[KEY_LEFTMETA / (sizeof(long) * 8)] & (1UL << (KEY_LEFTMETA % (sizeof(long) * 8))));
-    int has_a = (keybits[KEY_A / (sizeof(long) * 8)] & (1UL << (KEY_A % (sizeof(long) * 8))));
+    int has_meta = (keybits[KEY_LEFTMETA / (sizeof(long) * 8)] & (1UL << (KEY_LEFTMETA % (sizeof(long) * 8)))) != 0;
+    int has_a = (keybits[KEY_A / (sizeof(long) * 8)] & (1UL << (KEY_A % (sizeof(long) * 8)))) != 0;
     return has_meta || has_a;
 }
 
@@ -106,12 +113,33 @@ static void trigger_poisk_toggle(void) {
     // Spawn toggle in background asynchronously
     pid_t pid = fork();
     if (pid == 0) {
-        // Child: try systemd-run first so it always inherits full live session environment
+        char poisk_path[512];
+        const char *home = getenv("HOME");
+        if (home) {
+            snprintf(poisk_path, sizeof(poisk_path), "%s/.local/bin/poisk", home);
+            execlp("systemd-run", "systemd-run", "--user", "-q", poisk_path, "--toggle", NULL);
+            execl(poisk_path, "poisk", "--toggle", NULL);
+        }
         execlp("systemd-run", "systemd-run", "--user", "-q", "poisk", "--toggle", NULL);
-        // Fallback to direct execution
         execlp("poisk", "poisk", "--toggle", NULL);
         _exit(1);
     }
+}
+
+static int is_pantheon_active(void) {
+    const char *desktop = getenv("XDG_CURRENT_DESKTOP");
+    if (desktop && (strstr(desktop, "Pantheon") || strstr(desktop, "pantheon"))) {
+        return 1;
+    }
+    const char *session = getenv("DESKTOP_SESSION");
+    if (session && (strstr(session, "Pantheon") || strstr(session, "pantheon"))) {
+        return 1;
+    }
+    // Also check if Gala is running
+    if (system("pgrep -x gala > /dev/null 2>&1") == 0) {
+        return 1;
+    }
+    return 0;
 }
 
 int main(void) {
@@ -119,9 +147,9 @@ int main(void) {
     signal(SIGTERM, handle_signal);
     signal(SIGCHLD, SIG_IGN);
 
-    const char *desktop = getenv("XDG_CURRENT_DESKTOP");
-    if (desktop && (strstr(desktop, "Pantheon") || strstr(desktop, "pantheon"))) {
-        // Gala handles Super key natively via io.elementary.desktop.wm.behavior overlay-action.
+    if (is_pantheon_active()) {
+        // Gala handles Super key natively via io.elementary.desktop.wm.behavior overlay-action
+        // and org.gnome.mutter overlay-key.
         // Sleep to avoid duplicate triggers while keeping service healthy.
         while (running) {
             sleep(60);
@@ -134,14 +162,14 @@ int main(void) {
     struct pollfd pfd[MAX_DEVICES];
     int meta_down = 0;
     int combo_cancelled = 0;
-    struct timeval press_tv = {0, 0};
-    time_t last_scan = time(NULL);
+    uint64_t press_ms = 0;
+    uint64_t last_scan_ms = get_time_ms();
 
     while (running) {
-        time_t now = time(NULL);
-        if (now - last_scan >= 3) {
+        uint64_t now_ms = get_time_ms();
+        if (now_ms - last_scan_ms >= 3000) {
             rescan_devices();
-            last_scan = now;
+            last_scan_ms = now_ms;
         }
 
         for (int i = 0; i < num_devices; i++) {
@@ -172,12 +200,11 @@ int main(void) {
                             if (ev.value == 1) { // Press
                                 meta_down = 1;
                                 combo_cancelled = 0;
-                                press_tv = ev.time;
+                                press_ms = get_time_ms();
                             } else if (ev.value == 0) { // Release
                                 if (meta_down && !combo_cancelled) {
-                                    long ms = (ev.time.tv_sec - press_tv.tv_sec) * 1000 +
-                                              (ev.time.tv_usec - press_tv.tv_usec) / 1000;
-                                    if (ms >= 0 && ms < TAP_TIMEOUT_MS) {
+                                    uint64_t elapsed = get_time_ms() - press_ms;
+                                    if (elapsed < TAP_TIMEOUT_MS) {
                                         trigger_poisk_toggle();
                                     }
                                 }

@@ -12,11 +12,13 @@ Type=Application
 Categories=Utility;Core;
 Keywords=launcher;command;palette;search;calculator;poisk;поиск;
 StartupNotify=false
+NoDisplay=true
 SingleMainWindow=true
+StartupWMClass=io.github.mrlogiousbanana.poisk.app
 Actions=preferences;
 
 [Desktop Action preferences]
 Name=Параметры
 Name[en]=Preferences
-Exec=io.elementary.settings settings://poisk
+Exec=io.elementary.settings settings://desktop/poisk
 Icon=preferences-system

@@ -1,0 +1,39 @@
+# Maintainer: MrLogiousBanana <mrlogiousbanana@gmail.com>
+
+pkgname=poisk
+pkgver=1.0.0
+pkgrel=1
+pkgdesc="Fast native application launcher and command palette for Pantheon and Linux"
+arch=('x86_64' 'aarch64')
+url="https://github.com/Yatta-Project/poisk"
+license=('GPL-3.0-or-later')
+depends=(
+    'glib2'
+    'gtk4'
+    'libadwaita'
+    'granite7'
+    'json-glib'
+    'sqlite'
+    'wayland'
+)
+makedepends=(
+    'meson'
+    'ninja'
+    'vala'
+    'pkgconf'
+)
+optdepends=(
+    'switchboard: System Settings integration in Pantheon'
+    'gnome-shell: Shell blur extension integration'
+)
+source=("$pkgname-$pkgver.tar.xz::$url/releases/download/v$pkgver/$pkgname-$pkgver.tar.xz")
+sha256sums=('SKIP')
+
+build() {
+    arch-meson "$pkgname-$pkgver" build
+    meson compile -C build
+}
+
+package() {
+    meson install -C build --destdir "$pkgdir"
+}

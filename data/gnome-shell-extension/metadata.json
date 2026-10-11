@@ -1,0 +1,7 @@
+{
+  "name": "Poisk Blur",
+  "description": "Background blur for Poisk launcher with monolithic and dual-capsule island support",
+  "uuid": "poisk-blur@mrlogiousbanana.github.io",
+  "shell-version": [ "45", "46", "47", "48", "49", "50" ],
+  "url": "https://github.com/mrlogiousbanana/poisk"
+}

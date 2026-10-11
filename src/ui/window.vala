@@ -11,12 +11,20 @@ namespace Poisk.UI {
             MENU
         }
 
+        public enum WindowLayoutStyle {
+            MONOLITHIC,
+            ISLAND
+        }
+
         private WindowMode current_mode = WindowMode.CAPSULE;
+        private WindowLayoutStyle current_layout = WindowLayoutStyle.MONOLITHIC;
 
         private SearchEngine engine;
         private Box window_container;
         private Box root_box;
         private SystemBubble system_bubble;
+        private Box? monolithic_header_box = null;
+        private Separator? header_separator = null;
         private FrostedBox capsule_box;
         private PillHeader pill_header;
         private Box results_card;
@@ -30,13 +38,16 @@ namespace Poisk.UI {
         private Cancellable? current_search_cancellable = null;
         private GLib.Settings? transparency_settings = null;
         private GLib.Settings? poisk_settings = null;
+        private MultiBlurManager blur_manager;
+        private Gtk.CssProvider dynamic_css_provider = new Gtk.CssProvider ();
         private int target_window_height = 624;
 
         public LauncherWindow (SearchEngine engine) {
             Object ();
             this.engine = engine;
 
-            this.title = "Поиск";
+            // Empty title to prevent dock / window switcher detection
+            this.title = "";
             target_window_height = get_target_window_height ();
             this.set_default_size (848, target_window_height);
             this.resizable = false;
@@ -44,6 +55,8 @@ namespace Poisk.UI {
             this.modal = true;
             this.set_hide_on_close (true);
             this.add_css_class ("poisk-window");
+
+            blur_manager = new MultiBlurManager (this);
 
             setup_ui ();
             setup_key_handling ();
@@ -56,7 +69,18 @@ namespace Poisk.UI {
             ResultRow.get_cached_icon ("io.elementary.appcenter", 28);
 
             this.map.connect (() => {
-                set_skip_taskbar (this);
+                unowned var surface = this.get_surface ();
+                if (surface is Gdk.Wayland.Toplevel) {
+                    // Set distinct application id with NO matching .desktop file to comprehensively prevent dock inclusion
+                    ((Gdk.Wayland.Toplevel) surface).set_application_id ("io.github.mrlogiousbanana.poisk.floating");
+                }
+
+                blur_manager.request_focus ();
+                GLib.Timeout.add (60, () => {
+                    update_blur ();
+                    blur_manager.request_focus ();
+                    return GLib.Source.REMOVE;
+                });
             });
 
             // Focus on show, auto-hide on focus loss
@@ -66,9 +90,6 @@ namespace Poisk.UI {
                 } else if (this.visible) {
                     GLib.Timeout.add (120, () => {
                         if (!this.is_active && this.visible) {
-                            if (system_bubble != null && system_bubble.is_popover_open ()) {
-                                return GLib.Source.REMOVE;
-                            }
                             this.set_visible (false);
                         }
                         return GLib.Source.REMOVE;
@@ -80,7 +101,13 @@ namespace Poisk.UI {
                 if (this.visible) {
                     pill_header.set_text ("");
                     switch_mode (WindowMode.CAPSULE);
+                    blur_manager.request_focus ();
                     pill_header.grab_entry_focus ();
+                    GLib.Timeout.add (30, () => {
+                        update_blur ();
+                        blur_manager.request_focus ();
+                        return GLib.Source.REMOVE;
+                    });
                 }
             });
 
@@ -118,14 +145,15 @@ namespace Poisk.UI {
 
                 double bub_x = 0, bub_y = 0;
                 int bub_w = 0, bub_h = 0;
-                if (system_bubble != null) {
+                if (system_bubble != null && current_layout == WindowLayoutStyle.ISLAND) {
                     system_bubble.translate_coordinates (window_container, 0, 0, out bub_x, out bub_y);
                     bub_w = system_bubble.get_width ();
                     bub_h = system_bubble.get_height ();
                 }
 
                 bool in_capsule = (x >= cap_x && x <= cap_x + cap_w && y >= cap_y && y <= cap_y + cap_h);
-                bool in_bubble = (system_bubble != null && x >= bub_x && x <= bub_x + bub_w && y >= bub_y && y <= bub_y + bub_h);
+                bool in_bubble = (current_layout == WindowLayoutStyle.ISLAND &&
+                                  x >= bub_x && x <= bub_x + bub_w && y >= bub_y && y <= bub_y + bub_h);
 
                 if (!in_capsule && !in_bubble) {
                     this.set_visible (false);
@@ -141,6 +169,51 @@ namespace Poisk.UI {
                 poisk_settings.changed["enable-frosted-glass"].connect (() => {
                     update_transparency_mode ();
                 });
+                poisk_settings.changed["layout-style"].connect (() => {
+                    apply_layout_style ();
+                });
+                poisk_settings.changed["window-opacity"].connect (() => {
+                    update_dynamic_css ();
+                    update_blur ();
+                });
+                poisk_settings.changed["blur-radius"].connect (() => {
+                    update_transparency_mode ();
+                    update_blur ();
+                });
+            }
+
+            if (poisk_settings == null) {
+                string[] search_dirs = {
+                    Path.build_filename (Environment.get_user_data_dir (), "glib-2.0", "schemas"),
+                    Path.build_filename (Environment.get_home_dir (), ".local", "share", "glib-2.0", "schemas"),
+                };
+                foreach (var dir in search_dirs) {
+                    if (FileUtils.test (dir, FileTest.IS_DIR)) {
+                        try {
+                            var custom_source = new SettingsSchemaSource.from_directory (dir, schema_source, false);
+                            var schema = custom_source.lookup ("io.github.mrlogiousbanana.poisk", true);
+                            if (schema != null) {
+                                poisk_settings = new GLib.Settings.full (schema, null, null);
+                                poisk_settings.changed["enable-frosted-glass"].connect (() => {
+                                    update_transparency_mode ();
+                                });
+                                poisk_settings.changed["layout-style"].connect (() => {
+                                    apply_layout_style ();
+                                });
+                                poisk_settings.changed["window-opacity"].connect (() => {
+                                    update_dynamic_css ();
+                                    update_blur ();
+                                });
+                                poisk_settings.changed["blur-radius"].connect (() => {
+                                    update_transparency_mode ();
+                                    update_blur ();
+                                });
+                                break;
+                            }
+                        } catch (Error e) {
+                        }
+                    }
+                }
             }
 
             if (schema_source != null) {
@@ -153,38 +226,157 @@ namespace Poisk.UI {
                 }
             }
 
+            apply_layout_style ();
+            update_dynamic_css ();
             update_transparency_mode ();
         }
 
-        private void update_transparency_mode () {
-            bool use_trans = true;
-            if (transparency_settings != null) {
-                use_trans = transparency_settings.get_boolean ("use-transparency");
-            }
+        private void apply_layout_style () {
+            string style = "monolithic";
             if (poisk_settings != null) {
-                bool poisk_blur = poisk_settings.get_boolean ("enable-frosted-glass");
-                use_trans = use_trans && poisk_blur;
+                style = poisk_settings.get_string ("layout-style");
             }
-            set_frosted_enabled (use_trans);
+
+            current_layout = (style == "island") ? WindowLayoutStyle.ISLAND : WindowLayoutStyle.MONOLITHIC;
+
+            // Reconstruct header according to layout style
+            if (current_layout == WindowLayoutStyle.MONOLITHIC) {
+                if (system_bubble.get_parent () != null) {
+                    ((Box) system_bubble.get_parent ()).remove (system_bubble);
+                }
+                if (pill_header.get_parent () != null) {
+                    ((Box) pill_header.get_parent ()).remove (pill_header);
+                }
+
+                system_bubble.set_mode (SystemBubble.DisplayMode.EMBEDDED);
+
+                if (monolithic_header_box == null) {
+                    monolithic_header_box = new Box (Orientation.HORIZONTAL, 0);
+                    monolithic_header_box.valign = Align.START;
+                    monolithic_header_box.hexpand = true;
+
+                    header_separator = new Separator (Orientation.VERTICAL);
+                    header_separator.add_css_class ("header-separator");
+                    header_separator.set_size_request (1, 24);
+                    header_separator.valign = Align.CENTER;
+                } else {
+                    if (header_separator.get_parent () != null) {
+                        monolithic_header_box.remove (header_separator);
+                    }
+                }
+
+                monolithic_header_box.append (system_bubble);
+                monolithic_header_box.append (header_separator);
+                monolithic_header_box.append (pill_header);
+
+                capsule_box.prepend (monolithic_header_box);
+                pill_header.hexpand = true;
+
+                capsule_box.add_css_class ("monolithic-capsule");
+                capsule_box.remove_css_class ("island-capsule");
+            } else {
+                // ISLAND mode: system_bubble sits on root_box, capsule_box only holds pill_header
+                if (monolithic_header_box != null && monolithic_header_box.get_parent () != null) {
+                    capsule_box.remove (monolithic_header_box);
+                }
+                if (system_bubble.get_parent () != null) {
+                    ((Box) system_bubble.get_parent ()).remove (system_bubble);
+                }
+                if (pill_header.get_parent () != null) {
+                    ((Box) pill_header.get_parent ()).remove (pill_header);
+                }
+
+                system_bubble.set_mode (SystemBubble.DisplayMode.STANDALONE);
+                root_box.prepend (system_bubble);
+                capsule_box.prepend (pill_header);
+
+                capsule_box.remove_css_class ("monolithic-capsule");
+                capsule_box.add_css_class ("island-capsule");
+            }
+
+            switch_mode (current_mode);
+        }
+
+        private void update_dynamic_css () {
+            double opacity = 0.84;
+            if (poisk_settings != null) {
+                opacity = poisk_settings.get_double ("window-opacity");
+            }
+            if (opacity < 0.0) opacity = 0.0;
+            if (opacity > 1.0) opacity = 1.0;
+
+            string op_str = "%.3f".printf (opacity).replace (",", ".");
+
+            string dynamic_css = """
+                .poisk-capsule,
+                .satellite-bubble,
+                .system-bubble-btn {
+                    background-image: linear-gradient(to bottom, rgba(255, 255, 255, %s), rgba(235, 235, 235, %s));
+                }
+                @media (prefers-color-scheme: dark) {
+                    .poisk-capsule,
+                    .satellite-bubble,
+                    .system-bubble-btn {
+                        background-image: linear-gradient(to bottom, rgba(44, 44, 44, %s), rgba(55, 55, 55, %s));
+                    }
+                }
+            """.printf (op_str, op_str, op_str, op_str);
+
+            dynamic_css_provider.load_from_string (dynamic_css);
+        }
+
+        private void update_transparency_mode () {
+            bool system_reduced = false;
+            if (transparency_settings != null) {
+                system_reduced = !transparency_settings.get_boolean ("use-transparency");
+            }
+
+            if (system_reduced) {
+                capsule_box.add_css_class ("reduce-transparency");
+                this.add_css_class ("reduce-transparency");
+                capsule_box.frosted = false;
+                if (system_bubble != null) {
+                    system_bubble.set_frosted (false);
+                }
+                if (blur_manager != null) {
+                    blur_manager.remove_blur ();
+                }
+            } else {
+                capsule_box.remove_css_class ("reduce-transparency");
+                this.remove_css_class ("reduce-transparency");
+
+                bool poisk_blur = true;
+                int blur_r = 18;
+                if (poisk_settings != null) {
+                    poisk_blur = poisk_settings.get_boolean ("enable-frosted-glass");
+                    blur_r = poisk_settings.get_int ("blur-radius");
+                }
+                bool blur_enabled = poisk_blur && (blur_r > 0);
+                capsule_box.frosted = blur_enabled;
+                if (system_bubble != null) {
+                    system_bubble.set_frosted (blur_enabled);
+                }
+
+                if (blur_enabled) {
+                    update_blur ();
+                } else {
+                    if (blur_manager != null) {
+                        blur_manager.remove_blur ();
+                    }
+                }
+            }
+            update_dynamic_css ();
+            capsule_box.queue_draw ();
         }
 
         public void set_frosted_enabled (bool enabled) {
-            capsule_box.frosted = enabled;
-            if (system_bubble != null) {
-                system_bubble.set_frosted (enabled);
-            }
-            if (enabled) {
-                capsule_box.remove_css_class ("reduce-transparency");
-                this.remove_css_class ("reduce-transparency");
-            } else {
-                capsule_box.add_css_class ("reduce-transparency");
-                this.add_css_class ("reduce-transparency");
-            }
-            capsule_box.queue_draw ();
+            update_transparency_mode ();
         }
 
         public void switch_mode (WindowMode mode) {
             current_mode = mode;
+            int cap_width = (current_layout == WindowLayoutStyle.MONOLITHIC) ? 740 : 680;
+
             switch (mode) {
                 case WindowMode.CAPSULE:
                     results_card.visible = false;
@@ -193,7 +385,7 @@ namespace Poisk.UI {
                     pill_header.remove_css_class ("expanded-header");
                     this.remove_css_class ("expanded-card");
                     capsule_box.remove_css_class ("expanded-card");
-                    capsule_box.set_size_request (680, 58);
+                    capsule_box.set_size_request (cap_width, 58);
                     break;
 
                 case WindowMode.RESULTS:
@@ -203,7 +395,7 @@ namespace Poisk.UI {
                     pill_header.add_css_class ("expanded-header");
                     this.add_css_class ("expanded-card");
                     capsule_box.add_css_class ("expanded-card");
-                    capsule_box.set_size_request (680, 444);
+                    capsule_box.set_size_request (cap_width, 444);
                     break;
 
                 case WindowMode.MENU:
@@ -213,9 +405,72 @@ namespace Poisk.UI {
                     pill_header.add_css_class ("expanded-header");
                     this.add_css_class ("expanded-card");
                     capsule_box.add_css_class ("expanded-card");
-                    capsule_box.set_size_request (680, 444);
+                    capsule_box.set_size_request (cap_width, 444);
                     break;
             }
+
+            GLib.Timeout.add (30, () => {
+                update_blur ();
+                return GLib.Source.REMOVE;
+            });
+        }
+
+        private void update_blur () {
+            if (blur_manager == null || capsule_box == null) return;
+            if (poisk_settings != null && !poisk_settings.get_boolean ("enable-frosted-glass")) {
+                blur_manager.remove_blur ();
+                return;
+            }
+            if (transparency_settings != null && !transparency_settings.get_boolean ("use-transparency")) {
+                blur_manager.remove_blur ();
+                return;
+            }
+
+            int radius = 18;
+            double opacity = 0.84;
+            if (poisk_settings != null) {
+                radius = poisk_settings.get_int ("blur-radius");
+                opacity = poisk_settings.get_double ("window-opacity");
+            }
+
+            if (radius <= 0) {
+                blur_manager.remove_blur ();
+                return;
+            }
+
+            double cap_x = 0, cap_y = 0;
+            capsule_box.translate_coordinates (window_container, 0, 0, out cap_x, out cap_y);
+            int cap_w = capsule_box.get_width ();
+            int cap_h = capsule_box.get_height ();
+            int win_w = this.get_width ();
+            int win_h = this.get_height ();
+
+            double bub_x = 0, bub_y = 0;
+            int bub_w = 0, bub_h = 0;
+            if (system_bubble != null) {
+                system_bubble.translate_coordinates (window_container, 0, 0, out bub_x, out bub_y);
+                bub_w = system_bubble.get_width ();
+                bub_h = system_bubble.get_height ();
+            }
+
+            if (cap_w <= 0 || cap_h <= 0 || win_w <= 0 || win_h <= 0) return;
+
+            bool is_island = (current_layout == WindowLayoutStyle.ISLAND);
+
+            // In monolithic mode: single capsule is blurred.
+            // In island mode on Gala: blur strictly the search capsule (left = cap_x) so 14px gap has 0 blur spill!
+            uint left = (uint) (cap_x > 0 ? cap_x : 0);
+            uint top = (uint) (cap_y > 0 ? cap_y : 0);
+            uint right = (uint) ((win_w > cap_x + cap_w) ? (win_w - (cap_x + cap_w)) : 0);
+            uint bottom = (uint) ((win_h > cap_y + cap_h) ? (win_h - (cap_y + cap_h)) : 0);
+
+            blur_manager.attach_blur (
+                left, right, top, bottom, (uint) radius,
+                is_island,
+                (int) bub_x, (int) bub_y, bub_w, bub_h,
+                (int) cap_x, (int) cap_y, cap_w, cap_h,
+                opacity
+            );
         }
 
         private void setup_ui () {
@@ -236,20 +491,16 @@ namespace Poisk.UI {
             root_box.margin_top = 24;
             root_box.margin_bottom = 24;
 
-            // 1. Left Detached System Squircle
+            // Decorative system bubble widget
             system_bubble = new SystemBubble ();
-            system_bubble.action_triggered.connect (() => {
-                this.set_visible (false);
-            });
-            root_box.append (system_bubble);
 
-            // 2. Main Search Card (dock blur background)
+            // Main Search Card (dock blur background)
             capsule_box = new FrostedBox (Orientation.VERTICAL, 0);
             capsule_box.frosted = true;
             capsule_box.blur_radius = 24.0;
-            capsule_box.corner_radius = 16.0f;
+            capsule_box.corner_radius = 18.0f;
             capsule_box.add_css_class ("poisk-capsule");
-            capsule_box.set_size_request (680, 56);
+            capsule_box.set_size_request (740, 56);
             capsule_box.valign = Align.START;
             capsule_box.halign = Align.FILL;
             capsule_box.hexpand = true;
@@ -257,7 +508,6 @@ namespace Poisk.UI {
             pill_header = new PillHeader ();
             pill_header.search_changed.connect (on_search_changed);
             pill_header.activate.connect (on_header_activate);
-            capsule_box.append (pill_header);
 
             // Results Body
             results_card = new Box (Orientation.VERTICAL, 4);
@@ -417,10 +667,8 @@ namespace Poisk.UI {
         }
 
         private void setup_css () {
-            var provider = new CssProvider ();
+            var provider = new Gtk.CssProvider ();
             string css = """
-                /* Clean transparent root window */
-                window,
                 window.poisk-window {
                     background: transparent;
                     background-color: transparent;
@@ -440,7 +688,6 @@ namespace Poisk.UI {
                 .system-bubble-btn {
                     border-radius: 16px;
                     background-color: transparent;
-                    background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.84), rgba(235, 235, 235, 0.84));
                     border: 1px solid rgba(0, 0, 0, 0.18);
                     box-shadow:
                         inset 0 1px 0 0 rgba(255, 255, 255, 0.96),
@@ -452,17 +699,29 @@ namespace Poisk.UI {
                     min-height: 54px;
                     transition: all 180ms cubic-bezier(0.25, 0.8, 0.25, 1);
                 }
-                .satellite-bubble:hover,
-                .system-bubble-btn:hover {
-                    background-color: transparent;
-                    background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.94), rgba(240, 240, 240, 0.94));
-                    border-color: alpha(@accent_color, 0.55);
-                    box-shadow:
-                        inset 0 1px 0 0 rgba(255, 255, 255, 0.98),
-                        0 10px 32px rgba(0, 0, 0, 0.22),
-                        0 3px 8px rgba(0, 0, 0, 0.12);
-                    transform: scale(1.04);
+
+                /* Embedded system bubble inside monolithic header - uniform 16px margins */
+                .embedded-system-bubble {
+                    margin: 16px;
+                    min-width: 24px;
+                    min-height: 24px;
+                    opacity: 0.90;
                 }
+
+                separator.header-separator,
+                .header-separator {
+                    background: alpha(currentColor, 0.15);
+                    min-width: 1px;
+                    min-height: 24px;
+                    max-height: 24px;
+                    border: none;
+                    padding: 0;
+                    margin-top: 16px;
+                    margin-bottom: 16px;
+                    margin-left: 0px;
+                    margin-right: 16px;
+                }
+
                 .reduce-transparency .system-bubble-btn,
                 .system-bubble-btn.reduce-transparency {
                     background-image: none;
@@ -470,41 +729,9 @@ namespace Poisk.UI {
                     opacity: 1.0;
                 }
 
-                /* System flyout menu */
-                .system-flyout-popover contents {
-                    background-color: transparent;
-                    background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.95), rgba(242, 242, 244, 0.95));
-                    border-radius: 14px;
-                    border: 1px solid rgba(0, 0, 0, 0.18);
-                    box-shadow:
-                        inset 0 1px 0 rgba(255, 255, 255, 0.9),
-                        0 12px 36px rgba(0, 0, 0, 0.25);
-                    padding: 6px;
-                }
-                .system-flyout-title {
-                    font-weight: 700;
-                    font-size: 11px;
-                    opacity: 0.6;
-                    margin: 4px 8px 2px 8px;
-                    text-transform: uppercase;
-                    letter-spacing: 0.5px;
-                }
-                .system-flyout-item {
-                    border-radius: 8px;
-                    padding: 6px 10px;
-                    background: transparent;
-                    border: none;
-                    box-shadow: none;
-                    transition: background 120ms ease;
-                }
-                .system-flyout-item:hover {
-                    background: alpha(currentColor, 0.08);
-                }
-
                 /* Elementary Dock-like unified capsule with exact colors */
                 .poisk-capsule {
                     background-color: transparent;
-                    background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.84), rgba(235, 235, 235, 0.84));
                     border: 1px solid rgba(0, 0, 0, 0.18);
                     box-shadow:
                         inset 0 1px 0 0 rgba(255, 255, 255, 0.96),
@@ -540,30 +767,12 @@ namespace Poisk.UI {
                     .satellite-bubble,
                     .system-bubble-btn {
                         background-color: transparent;
-                        background-image: linear-gradient(to bottom, rgba(44, 44, 44, 0.84), rgba(55, 55, 55, 0.84));
                         border: 1px solid rgba(0, 0, 0, 0.37);
                         box-shadow:
                             inset 0 1px 0 0 rgba(180, 180, 180, 0.50),
                             inset 0 -1px 0 0 rgba(0, 0, 0, 0.40),
                             0 12px 36px rgba(0, 0, 0, 0.45),
                             0 4px 10px rgba(0, 0, 0, 0.25);
-                    }
-
-                    .satellite-bubble:hover,
-                    .system-bubble-btn:hover {
-                        background-image: linear-gradient(to bottom, rgba(56, 56, 56, 0.92), rgba(68, 68, 68, 0.92));
-                        border-color: alpha(@accent_color, 0.60);
-                        box-shadow:
-                            inset 0 1px 0 0 rgba(210, 210, 210, 0.65),
-                            0 14px 40px rgba(0, 0, 0, 0.50);
-                    }
-
-                    .system-flyout-popover contents {
-                        background-image: linear-gradient(to bottom, rgba(48, 50, 56, 0.95), rgba(36, 38, 44, 0.95));
-                        border: 1px solid rgba(255, 255, 255, 0.12);
-                        box-shadow:
-                            inset 0 1px 0 rgba(255, 255, 255, 0.15),
-                            0 16px 48px rgba(0, 0, 0, 0.55);
                     }
 
                     .poisk-capsule.expanded-card {
@@ -582,7 +791,7 @@ namespace Poisk.UI {
                     border-radius: 16px;
                     box-shadow: none;
                     min-height: 56px;
-                    padding: 0 14px;
+                    padding: 0;
                 }
                 .poisk-pill-header.expanded-header {
                     border-bottom: 1px solid alpha(@borders, 0.50);
@@ -604,8 +813,42 @@ namespace Poisk.UI {
                     outline: none;
                     font-size: 16px;
                     font-weight: 400;
-                    padding-left: 6px;
-                    padding-right: 6px;
+                    padding-right: 16px;
+                }
+
+                .monolithic-capsule .poisk-pill-header {
+                    padding-left: 0px;
+                    padding-right: 16px;
+                    margin: 0;
+                    border: none;
+                }
+
+                .monolithic-capsule entry.pill-entry,
+                .monolithic-capsule entry.pill-entry:focus,
+                .monolithic-capsule entry.pill-entry:focus-within,
+                .monolithic-capsule entry.pill-entry text,
+                .monolithic-capsule entry.pill-entry text:focus,
+                .monolithic-capsule entry.pill-entry text:focus-within {
+                    padding-left: 0px;
+                    margin-left: 0px;
+                    border: none;
+                    box-shadow: none;
+                    outline: none;
+                }
+
+                .island-capsule .poisk-pill-header {
+                    padding-left: 16px;
+                    padding-right: 16px;
+                }
+
+                .island-capsule entry.pill-entry,
+                .island-capsule entry.pill-entry:focus,
+                .island-capsule entry.pill-entry:focus-within,
+                .island-capsule entry.pill-entry text,
+                .island-capsule entry.pill-entry text:focus,
+                .island-capsule entry.pill-entry text:focus-within {
+                    padding-left: 0px;
+                    margin-left: 0px;
                 }
 
                 /* Results & Menu Body */
@@ -656,6 +899,11 @@ namespace Poisk.UI {
                 Gdk.Display.get_default (),
                 provider,
                 Gtk.STYLE_PROVIDER_PRIORITY_USER
+            );
+            Gtk.StyleContext.add_provider_for_display (
+                Gdk.Display.get_default (),
+                dynamic_css_provider,
+                Gtk.STYLE_PROVIDER_PRIORITY_USER + 10
             );
         }
 

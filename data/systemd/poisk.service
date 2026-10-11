@@ -1,14 +1,16 @@
 [Unit]
 Description=Poisk Launcher Background Daemon
+PartOf=graphical-session.target
+After=graphical-session.target
 StartLimitIntervalSec=0
 
 [Service]
 Type=simple
-ExecStart=%h/.local/bin/poisk --background
+ExecStart=/usr/bin/poisk --background
 Restart=always
 RestartSec=2
 StandardOutput=journal
 StandardError=journal
 
 [Install]
-WantedBy=default.target
+WantedBy=graphical-session.target

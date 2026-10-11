@@ -13,7 +13,11 @@ namespace Poisk.UI {
                 default_height: 580
             );
 
-            this.add (new SettingsView ());
+            var page = new Adw.PreferencesPage ();
+            page.title = "Поиск";
+            page.icon_name = "system-search";
+            new SettingsView (page);
+            this.add (page);
         }
     }
 }

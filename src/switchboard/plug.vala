@@ -1,9 +1,21 @@
 using Gtk;
 using Switchboard;
 
+public class PoiskSettingsPage : Switchboard.SettingsPage {
+    public PoiskSettingsPage () {
+        Object (
+            title: "Поиск",
+            icon: new GLib.ThemedIcon ("system-search"),
+            child: new Poisk.UI.SettingsView ()
+        );
+    }
+}
+
 public class PoiskPlug : Switchboard.Plug {
     public PoiskPlug () {
         var settings = new Gee.TreeMap<string, string?> (null, null);
+        settings.set ("desktop/poisk", null);
+        settings.set ("desktop/search", null);
         settings.set ("poisk", null);
         settings.set ("search", null);
 
@@ -11,14 +23,22 @@ public class PoiskPlug : Switchboard.Plug {
             category: Category.PERSONAL,
             code_name: "io.github.mrlogiousbanana.poisk",
             display_name: "Поиск",
-            description: "Быстрый нативный лаунчер и командная палитра",
+            description: "Параметры поиска и оформления лаунчера рабочего стола",
             icon: "system-search",
             supported_settings: settings
         );
+
+        // Hide standalone tile from the root Switchboard grid so settings live inside the Desktop category
+        this.can_show = false;
     }
 
+    private PoiskSettingsPage? page = null;
+
     public override Gtk.Widget get_widget () {
-        return new Poisk.UI.SettingsView ();
+        if (page == null) {
+            page = new PoiskSettingsPage ();
+        }
+        return page;
     }
 
     public override void shown () {}
@@ -27,9 +47,9 @@ public class PoiskPlug : Switchboard.Plug {
 
     public override async Gee.TreeMap<string, string> search (string search_term) {
         var res = new Gee.TreeMap<string, string> (null, null);
-        res.set ("Поиск → Внешний вид", "");
-        res.set ("Поиск → Горячие клавиши", "");
-        res.set ("Поиск → Источники поиска", "");
+        res.set ("Рабочий стол → Поиск → Внешний вид", "desktop/poisk");
+        res.set ("Рабочий стол → Поиск → Горячие клавиши", "desktop/poisk");
+        res.set ("Рабочий стол → Поиск → Источники поиска", "desktop/poisk");
         return res;
     }
 }

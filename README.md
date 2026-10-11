@@ -1,110 +1,154 @@
 # Поиск (Poisk)
 
-**Поиск (Poisk)** — быстрый нативный лаунчер и командная палитра для Linux с первоклассной интеграцией в **Pantheon (elementary OS)** и поддержкой **GNOME**.
+<p align="center">
+  <b>Быстрый нативный лаунчер и командная палитра для Linux с первоклассной поддержкой elementary OS (Pantheon) и GNOME Shell</b>
+</p>
 
-Полностью написан на **Vala**, **GTK4**, **Libadwaita** и **Granite 7**.
-
-> Проект вдохновлён концепциями [Vicinae](https://github.com/vicinaehq/vicinae) и полностью переосмыслен как легковесный системный инструмент поиска для экосистемы elementary OS / Pantheon.
-
----
-
-## ⚡ Особенности
-
-* **Эстетика дока Pantheon:**
-  * Полупрозрачный фон с мягким размытием и контурной подсветкой в стиле системного дока (`io.elementary.dock`).
-  * Полная адаптация под системную тему: автоматическое переключение светлой/тёмной темы и реакция на системный режим «Уменьшить прозрачность» (`.reduce-transparency`).
-* **Только чистый Поиск:**
-  * 🚀 **Приложения:** мгновенный запуск, поиск по `.desktop`-файлам, ранжирование по частоте запусков.
-  * 🪟 **Открытые окна:** нативное переключение между окнами в Pantheon (Wayland) через D-Bus композитора **Gala** (`org.pantheon.gala.DesktopIntegration`).
-  * 🔢 **Калькулятор:** быстрый расчёт математических выражений (`2 + 2 * 5`, `sqrt(144)`, `sin(pi/2)`, `2^10`).
-  * 📱 **Сетка приложений (`:apps` / `:menu`):** режим обзора всех установленных программ.
-* **Мгновенный вызов по клавише Super:**
-  * Демон **`poisk-superd`** на C перехватывает одиночный тап `Super` через подсистему ядра Linux `evdev` (`/dev/input/event*`), не ломая хоткеи (`Super+Tab`, `Super+Space`) и системные жесты.
-* **Глубокая интеграция с Параметрами системы (Switchboard):**
-  * Встроенный плагин для системных настроек elementary OS (`io.elementary.settings` / Switchboard).
-  * Настройки лаунчера отображаются в категории **«Личные»** параметров системы: управление размытием, лимитом выдачи, сеткой приложений, горячими клавишами и провайдерами.
-  * Standalone-окно параметров через `poisk --preferences`.
-* **Нулевая задержка открытия (<5 мс):**
-  * Процесс лаунчера удерживается в памяти как фоновый демон `poisk`. Окно предзагружено, поэтому при вызове оно отображается моментально.
+<p align="center">
+  <img src="https://img.shields.io/badge/version-1.0.0-blue.svg" alt="Version 1.0.0" />
+  <img src="https://img.shields.io/badge/license-GPL--3.0--or--later-green.svg" alt="License" />
+  <img src="https://img.shields.io/badge/platform-Wayland-orange.svg" alt="Platform Wayland" />
+  <img src="https://img.shields.io/badge/GTK-4.12+-purple.svg" alt="GTK4" />
+  <img src="https://img.shields.io/badge/elementary%20OS-7%20%7C%208-teal.svg" alt="Pantheon" />
+</p>
 
 ---
 
-## 🚀 Управление
+## ⚡ О проекте
 
-* `↵ Enter` — запустить выбранное приложение / переключиться на окно / скопировать результат калькулятора.
-* `⎋ Escape` — очистить строку поиска / скрыть окно.
-* `↑ / ↓` — навигация по списку результатов.
-* Клик вне окна — автоматическое скрытие.
+**Поиск (Poisk)** — легковесный, моментальный системный лаунчер, созданный на **Vala**, **GTK4**, **Libadwaita** и **Granite 7**. Разработан специально для комфортной работы в современных Wayland-окружениях: нативно интегрируется в **elementary OS (Pantheon)** и **GNOME Shell**, предлагая эстетику системного дока, аппаратное размытие (frosted glass) и скорость отклика менее 5 миллисекунд.
 
 ---
 
-## 🛠 Сборка и установка
+## 🌟 Ключевые возможности
 
-### 1. Стандартные дистрибутивы (elementary OS, Fedora, Ubuntu, Arch)
+### 🎨 Два стиля компоновки (Aesthetics)
+* **Монолитная капсула (Monolithic Capsule):**
+  - Единая выверенная капсула поиска с встроенным системным логотипом.
+  - **Pixel-Perfect геометрия:** строгий шаг в 16px между всеми элементами:
+    $$\text{Внешний край} \xrightarrow{16\text{ px}} [\text{Иконка ОС 24px}] \xrightarrow{16\text{ px}} [\text{Сепаратор 1px}] \xrightarrow{16\text{ px}} [\text{Текст ввода}]$$
+* **Островной режим (Island Mode):**
+  - Раздельная компоновка: поисковая капсула и парящий спутник-логотип (Satellite Button) с мягким объёмным свечением.
 
-#### Зависимости:
-* `vala >= 0.56`
-* `meson >= 0.60`, `ninja`
-* `gtk4 >= 4.12`
-* `libadwaita-1 >= 1.5`
-* `granite-7 >= 7.0`
-* `json-glib-1.0`
-* `sqlite3`
-* `libX11`
+### 🔮 Эффект матового стекла (Frosted Glass)
+* Аппаратный шейдерный блюр на стороне композитора (в GNOME — через расширение, в Pantheon — через протокол Wayland).
+* Плавная регулировка прозрачности (50%–100%) и радиуса размытия (4–64px).
+* Реакция на общесистемный режим *«Уменьшить прозрачность»* (`.reduce-transparency`).
 
-#### Сборка:
-```bash
-meson setup build
-ninja -C build
-```
+### ⌨️ Умное управление горячими клавишами
+* **Вызов по одиночному нажатию `Super`:** чистый перехват на уровне композитора без помех системным комбинациям (`Super+Tab`, `Super+Space`).
+* **Произвольные сочетания клавиш:** возможность назначить любую комбинацию (например, `Ctrl+Space`) или отдельную клавишу прямо в графических параметрах с живой записью хоткея.
 
-#### Установка:
-```bash
-sudo ninja -C build install
-```
+### 🔍 Фокус на поиске и продуктивности
+* 🚀 **Приложения:** мгновенный поиск по desktop-файлам, умное ранжирование по частоте запусков.
+* 🪟 **Открытые окна:** переключение между активными окнами без задержек.
+* 🔢 **Встроенный калькулятор:** моментальный подсчёт математических выражений (`2 + 2 * 5`, `sqrt(144)`, `sin(pi/2)`).
 
-#### Запуск:
-```bash
-poisk --toggle
-```
+### ⚙️ Нативная системная интеграция
+* **elementary OS (Switchboard):** встроенный модуль настроек (`libpoisk.so`) в категории **«Личные»** системных параметров elementary OS.
+* **GNOME Shell:** комплектное расширение с поддержкой GNOME 45–48 и нативной страницей настроек `Adw.PreferencesPage`.
+* **Фоновый демон:** запуск через пользовательский `systemd.service` — окно предзагружено в памяти и появляется мгновенно (<5 мс).
 
 ---
 
-### 2. Сборка в NixOS (Опционально)
+## 📦 Установка и пакеты
 
-Сборка через предоставленный `shell.nix`:
+Готовые бинарные пакеты доступны на странице [Releases](https://github.com/Yatta-Project/poisk/releases):
+
+### Fedora / RHEL / openSUSE (RPM)
 ```bash
-nix-shell --run "meson setup build && ninja -C build"
+sudo dnf install ./poisk-1.0.0-1.x86_64.rpm
 ```
 
-Или сборка пакета:
+### Ubuntu / Debian / elementary OS (DEB)
 ```bash
+sudo dpkg -i ./poisk_1.0.0_amd64.deb
+sudo apt-get install -f
+```
+
+### Arch Linux (AUR / PKGBUILD)
+```bash
+git clone https://github.com/Yatta-Project/poisk.git
+cd poisk/packaging
+makepkg -si
+```
+
+### Nix / NixOS
+```bash
+nix-shell
+# или сборка деривации:
 nix-build
 ```
 
 ---
 
-## ⌨️ Настройка автозапуска
+## 🛠 Сборка из исходников
 
-Шаблоны пользовательских сервисов systemd находятся в каталоге `data/systemd/`:
+### Зависимости:
+* `vala >= 0.56`
+* `meson >= 0.60`, `ninja-build`
+* `gtk4 >= 4.12`
+* `libadwaita-1 >= 1.5`
+* `granite-7 >= 7.0`
+* `json-glib-1.0`, `sqlite3`, `wayland-client`
+
+### Компиляция:
 ```bash
-mkdir -p ~/.config/systemd/user
-cp data/systemd/poisk.service ~/.config/systemd/user/
-cp data/systemd/poisk-superd.service ~/.config/systemd/user/
-
-systemctl --user daemon-reload
-systemctl --user enable --now poisk.service poisk-superd.service
+git clone https://github.com/Yatta-Project/poisk.git
+cd poisk
+meson setup build
+ninja -C build
+sudo ninja -C build install
 ```
 
 ---
 
-## 🔗 Ссылки и благодарности
+## 🚀 Настройка автозапуска (systemd)
 
-* **Репозиторий проекта:** [https://github.com/mrlogiousbanana/poisk](https://github.com/mrlogiousbanana/poisk)
-* **Оригинальный проект Vicinae:** [https://github.com/vicinaehq/vicinae](https://github.com/vicinaehq/vicinae)
+Для мгновенного отклика лаунчер работает в фоновом режиме через пользовательскую службу `systemd`:
+
+```bash
+systemctl --user daemon-reload
+systemctl --user enable --now poisk.service
+```
+
+Проверить статус:
+```bash
+systemctl --user status poisk.service
+```
+
+Вызов лаунчера вручную или из скрипта:
+```bash
+poisk --toggle
+```
+
+Параметры лаунчера:
+```bash
+poisk --preferences
+```
 
 ---
 
-## Лицензия
+## 🧩 Расширение GNOME Shell
 
-GPL-3.0-or-later.
+Для работы эффекта размытия фона и перехвата клавиши в GNOME Shell используйте входящее в состав расширение:
+* Папка расширения: `data/gnome-shell-extension`
+* UUID: `poisk-blur@mrlogiousbanana.github.io`
+* Установка вручную:
+  ```bash
+  mkdir -p ~/.local/share/gnome-shell/extensions/poisk-blur@mrlogiousbanana.github.io
+  cp -r data/gnome-shell-extension/* ~/.local/share/gnome-shell/extensions/poisk-blur@mrlogiousbanana.github.io/
+  gnome-extensions enable poisk-blur@mrlogiousbanana.github.io
+  ```
+
+---
+
+## 📜 Лицензия
+
+Проект распространяется под свободной лицензией **GNU General Public License v3.0 (GPL-3.0-or-later)**. Подробности в файле [LICENSE](LICENSE).
+
+---
+
+## 🤝 Организация
+
+Разрабатывается в рамках [Yatta-Project](https://github.com/Yatta-Project).

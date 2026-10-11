@@ -6,6 +6,21 @@
       <summary>Enable translucent blur effect</summary>
       <description>Whether to render background blur effect under the capsule</description>
     </key>
+    <key name="layout-style" type="s">
+      <default>'monolithic'</default>
+      <summary>Window layout style</summary>
+      <description>Visual layout of the launcher: 'monolithic' (single integrated capsule) or 'island' (detached icon squircle and search pill)</description>
+    </key>
+    <key name="window-opacity" type="d">
+      <default>0.84</default>
+      <summary>Window background opacity</summary>
+      <description>Background surface opacity from 0.30 to 1.00</description>
+    </key>
+    <key name="blur-radius" type="i">
+      <default>18</default>
+      <summary>Compositor blur radius</summary>
+      <description>Radius in pixels for background blur effect</description>
+    </key>
     <key name="max-results" type="i">
       <default>30</default>
       <summary>Maximum search results to display</summary>
@@ -30,6 +45,11 @@
       <default>true</default>
       <summary>Enable Calculator Provider</summary>
       <description>Perform on-the-fly math calculations in search results</description>
+    </key>
+    <key name="shortcut-name" type="s">
+      <default>'Super'</default>
+      <summary>Activation shortcut or key name</summary>
+      <description>Custom accelerator (e.g. 'Super', '&lt;Super&gt;space', '&lt;Control&gt;space', 'F12')</description>
     </key>
   </schema>
 </schemalist>

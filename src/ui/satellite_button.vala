@@ -43,37 +43,7 @@ namespace Poisk.UI {
         }
 
         public override void snapshot (Gtk.Snapshot snapshot) {
-            if (!frosted) {
-                base.snapshot (snapshot);
-                return;
-            }
-
-            float w = (float) get_width ();
-            float h = (float) get_height ();
-            if (w <= 0 || h <= 0) {
-                base.snapshot (snapshot);
-                return;
-            }
-
-            var rect = Graphene.Rect ();
-            rect.init (0.0f, 0.0f, w, h);
-
-            var rounded = Gsk.RoundedRect ();
-            var sz = Graphene.Size ();
-            sz.init (corner_radius, corner_radius);
-            rounded.init (rect, sz, sz, sz, sz);
-
-            snapshot.push_rounded_clip (rounded);
-            snapshot.push_copy ();
-            snapshot.push_blur (blur_radius);
-            snapshot.append_paste (rect, 0);
-
-            snapshot.pop (); // blur
-            snapshot.pop (); // copy
-
             base.snapshot (snapshot);
-
-            snapshot.pop (); // rounded_clip
         }
     }
 }

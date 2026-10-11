@@ -21,19 +21,61 @@ namespace Poisk.Bridges {
 
         private GalaDesktopIntegrationProxy? gala_proxy = null;
 
+        private GLib.Settings? poisk_settings = null;
+
         public PantheonBridge () {
             init_gala.begin ();
+            init_settings ();
             setup_super_key_binding ();
         }
 
-        private void setup_super_key_binding () {
+        private void init_settings () {
             var schema_source = SettingsSchemaSource.get_default ();
+            if (schema_source != null && schema_source.lookup ("io.github.mrlogiousbanana.poisk", true) != null) {
+                poisk_settings = new GLib.Settings ("io.github.mrlogiousbanana.poisk");
+                poisk_settings.changed["shortcut-name"].connect (() => {
+                    setup_super_key_binding ();
+                });
+            }
+        }
+
+        private void setup_super_key_binding () {
+            string shortcut_name = "Super";
+            if (poisk_settings != null) {
+                try {
+                    shortcut_name = poisk_settings.get_string ("shortcut-name");
+                    if (shortcut_name == "") shortcut_name = "Super";
+                } catch (Error e) {
+                    shortcut_name = "Super";
+                }
+            }
+
+            var schema_source = SettingsSchemaSource.get_default ();
+            if (schema_source == null) return;
+
             var schema = schema_source.lookup ("io.elementary.desktop.wm.behavior", true);
             if (schema != null && schema.has_key ("overlay-action")) {
                 var settings = new GLib.Settings ("io.elementary.desktop.wm.behavior");
-                string current_action = settings.get_string ("overlay-action");
-                if (current_action != "poisk --toggle") {
-                    settings.set_string ("overlay-action", "poisk --toggle");
+                if (shortcut_name == "Super" || shortcut_name == "Super_L" || shortcut_name == "Super_R") {
+                    string current_action = settings.get_string ("overlay-action");
+                    if (current_action != "poisk --toggle") {
+                        settings.set_string ("overlay-action", "poisk --toggle");
+                    }
+                } else {
+                    if (settings.get_string ("overlay-action") == "poisk --toggle") {
+                        settings.set_string ("overlay-action", "io.elementary.wingpanel --toggle-indicator=app-launcher");
+                    }
+                }
+            }
+
+            var mutter_schema = schema_source.lookup ("org.gnome.mutter", true);
+            if (mutter_schema != null && mutter_schema.has_key ("overlay-key")) {
+                var mutter_settings = new GLib.Settings ("org.gnome.mutter");
+                if (shortcut_name == "Super" || shortcut_name == "Super_L" || shortcut_name == "Super_R") {
+                    string current_key = mutter_settings.get_string ("overlay-key");
+                    if (current_key != "Super_L") {
+                        mutter_settings.set_string ("overlay-key", "Super_L");
+                    }
                 }
             }
         }

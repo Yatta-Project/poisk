@@ -13,7 +13,7 @@ pkgs.mkShell {
     libgee
     json-glib
     sqlite
-    libx11
+    wayland
   ];
 
   shellHook = ''

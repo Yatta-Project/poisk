@@ -11,6 +11,7 @@ namespace Poisk {
         private SearchEngine engine;
         private DesktopBridge desktop_bridge;
         private LauncherWindow? window = null;
+        private int64 last_toggle_time = 0;
 
         public Application () {
             Object (
@@ -89,6 +90,13 @@ namespace Poisk {
             for (int i = 1; i < args.length; i++) {
                 string arg = args[i];
                 if (arg == "--toggle" || arg == "-t") {
+                    int64 now = GLib.get_monotonic_time ();
+                    // 250ms debounce to prevent any accidental double-toggling
+                    if (now - last_toggle_time < 250000) {
+                        return 0;
+                    }
+                    last_toggle_time = now;
+
                     if (window != null && window.visible) {
                         window.set_visible (false);
                     } else {

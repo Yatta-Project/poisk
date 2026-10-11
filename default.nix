@@ -27,8 +27,12 @@ pkgs.stdenv.mkDerivation rec {
     libgee
     json-glib
     sqlite
-    libx11
+    wayland
   ];
+
+  postFixup = ''
+    rm -rf $out/lib/systemd
+  '';
 
   meta = with pkgs.lib; {
     description = "Fast native launcher and productivity palette for Pantheon and Linux";

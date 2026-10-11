@@ -1,0 +1,26 @@
+Source: poisk
+Section: utils
+Priority: optional
+Maintainer: MrLogiousBanana <mrlogiousbanana@gmail.com>
+Build-Depends: debhelper-compat (= 13),
+               meson (>= 0.60.0),
+               ninja-build,
+               valac (>= 0.56.0),
+               pkg-config,
+               libglib2.0-dev (>= 2.76),
+               libgtk-4-dev (>= 4.12),
+               libadwaita-1-dev (>= 1.5),
+               libgranite-7-dev (>= 7.0),
+               libjson-glib-dev,
+               libsqlite3-dev,
+               libwayland-dev
+Standards-Version: 4.6.2
+Homepage: https://github.com/Yatta-Project/poisk
+
+Package: poisk
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Fast native application launcher and command palette for Pantheon and Linux
+ Poisk is a fast, keyboard-centric application launcher and productivity palette
+ for Linux with first-class elementary OS (Pantheon) and GNOME Shell support.
+ Written with Vala, GTK4, Libadwaita, and Granite 7.

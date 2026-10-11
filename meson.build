@@ -1,5 +1,6 @@
 project('poisk', ['c', 'vala'],
   version: '1.0.0',
+  license: 'GPL-3.0-or-later',
   meson_version: '>= 0.60.0',
   default_options: [
     'warning_level=2',
@@ -23,14 +24,22 @@ json_glib_dep = dependency('json-glib-1.0')
 sqlite_dep = dependency('sqlite3')
 posix_dep = meson.get_compiler('vala').find_library('posix')
 
-x11_dep = dependency('x11')
-gtk4_x11_dep = dependency('gtk4-x11')
+# Wayland dependencies
+wayland_client_dep = dependency('wayland-client', required: false)
+gtk4_wayland_dep = dependency('gtk4-wayland', required: false)
+poisk_extra_sources = []
+poisk_extra_deps = []
 
-# Vala flags
-add_project_arguments([
-  '--vapidir=' + meson.current_source_dir() + '/vapi',
-  '--pkg=x11_utils',
-], language: 'vala')
+if wayland_client_dep.found() and gtk4_wayland_dep.found()
+  add_project_arguments([
+    '--vapidir=' + meson.current_source_dir() + '/protocol',
+    '--pkg=pantheon-desktop-shell',
+    '--pkg=gtk4-wayland',
+    '-D', 'HAVE_PANTHEON_SHELL',
+  ], language: 'vala')
+  poisk_extra_sources += files('protocol/pantheon-desktop-shell-protocol.c')
+  poisk_extra_deps += [wayland_client_dep, gtk4_wayland_dep]
+endif
 
 sources = files(
   'src/main.vala',
@@ -53,12 +62,16 @@ sources = files(
   'src/ui/app_grid.vala',
   'src/ui/settings_view.vala',
   'src/ui/preferences_window.vala',
+  'src/ui/pantheon_blur.vala',
   'src/ui/window.vala',
-  'src/ui/x11_utils.c',
 )
 
 executable('poisk',
-  sources,
+  sources + poisk_extra_sources,
+  include_directories: [
+    include_directories('.'),
+    include_directories('protocol'),
+  ],
   dependencies: [
     glib_dep,
     gobject_dep,
@@ -70,17 +83,11 @@ executable('poisk',
     json_glib_dep,
     sqlite_dep,
     posix_dep,
-    x11_dep,
-    gtk4_x11_dep,
     m_dep,
-  ],
+  ] + poisk_extra_deps,
   install: true,
 )
 
-executable('poisk-superd',
-  files('src/daemon/superd.c'),
-  install: true,
-)
 
 switchboard_dep = dependency('switchboard-3', required: false)
 gee_dep = dependency('gee-0.8', required: false)
@@ -127,8 +134,14 @@ endif
 
 install_data(
   'data/systemd/poisk.service',
-  'data/systemd/poisk-superd.service',
   install_dir: systemd_user_unit_dir,
+)
+
+install_data(
+  'data/gnome-shell-extension/metadata.json',
+  'data/gnome-shell-extension/extension.js',
+  'data/gnome-shell-extension/prefs.js',
+  install_dir: get_option('datadir') / 'gnome-shell' / 'extensions' / 'poisk-blur@mrlogiousbanana.github.io',
 )
 
 gnome.post_install(
