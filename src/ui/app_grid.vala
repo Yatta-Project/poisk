@@ -45,6 +45,7 @@ namespace Poisk.UI {
 
     public class AppGrid : Box {
         private ScrolledWindow scroll;
+        private FadingBox fading_box;
         private Box content_box;
         private List<AppGridItem> all_cards = new List<AppGridItem> ();
         private int selected_card_index = -1;
@@ -75,7 +76,11 @@ namespace Poisk.UI {
             content_box.margin_end = 12;
 
             scroll.set_child (content_box);
-            this.append (scroll);
+
+            fading_box = new FadingBox (Orientation.VERTICAL, 0);
+            fading_box.attach_scrolled_window (scroll);
+            fading_box.append (scroll);
+            this.append (fading_box);
         }
 
         private FlowBox create_flow_box () {

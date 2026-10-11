@@ -519,7 +519,7 @@ namespace Poisk.UI {
             results_card.hexpand = true;
             results_card.visible = false;
 
-            var list_content_box = new Box (Orientation.HORIZONTAL, 0);
+            var list_content_box = new FadingBox (Orientation.HORIZONTAL, 0);
             list_content_box.vexpand = true;
             list_content_box.hexpand = true;
 
@@ -536,6 +536,7 @@ namespace Poisk.UI {
             result_list.row_activated.connect (on_row_activated);
 
             list_scroll.set_child (result_list);
+            list_content_box.attach_scrolled_window (list_scroll);
             list_content_box.append (list_scroll);
 
             results_card.append (list_content_box);

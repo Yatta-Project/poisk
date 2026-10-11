@@ -57,6 +57,7 @@ sources = files(
   'src/ui/satellite_button.vala',
   'src/ui/system_bubble.vala',
   'src/ui/frosted_box.vala',
+  'src/ui/fading_box.vala',
   'src/ui/pill_header.vala',
   'src/ui/result_row.vala',
   'src/ui/preview_pane.vala',
