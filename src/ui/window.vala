@@ -30,6 +30,7 @@ namespace Poisk.UI {
         private Box results_card;
         private ListBox result_list;
         private ScrolledWindow list_scroll;
+        private FadingBox list_content_box;
         private Box menu_card;
         private AppGrid app_grid;
         private Label menu_footer_label;
@@ -519,7 +520,7 @@ namespace Poisk.UI {
             results_card.hexpand = true;
             results_card.visible = false;
 
-            var list_content_box = new FadingBox (Orientation.HORIZONTAL, 0);
+            list_content_box = new FadingBox (Orientation.HORIZONTAL, 0);
             list_content_box.vexpand = true;
             list_content_box.hexpand = true;
 
@@ -989,6 +990,7 @@ namespace Poisk.UI {
 
             switch_mode (WindowMode.RESULTS);
             footer_label.set_text ("↵ Выполнить / Открыть    ⎋ Очистить    ↑↓ Навигация");
+            list_content_box.reset_scroll ();
 
             // Clear previous list
             ListBoxRow? child = result_list.get_first_child () as ListBoxRow;
@@ -1060,15 +1062,7 @@ namespace Poisk.UI {
         }
 
         private void ensure_row_visible (ListBoxRow row) {
-            var adj = list_scroll.get_vadjustment ();
-            double y = 0;
-            row.translate_coordinates (result_list, 0, 0, null, out y);
-            int height = row.get_height ();
-            if (y < adj.get_value ()) {
-                adj.set_value (y);
-            } else if (y + height > adj.get_value () + adj.get_page_size ()) {
-                adj.set_value (y + height - adj.get_page_size ());
-            }
+            list_content_box.scroll_to_child (row);
         }
     }
 }

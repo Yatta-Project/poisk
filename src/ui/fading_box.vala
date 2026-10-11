@@ -8,9 +8,15 @@ namespace Poisk.UI {
 
         private ScrolledWindow? target_scroll = null;
         private Adjustment? current_vadj = null;
+        private EventControllerScroll? scroll_controller = null;
+
         private ulong val_conn = 0;
         private ulong chg_conn = 0;
         private ulong adj_notify_conn = 0;
+
+        private uint tick_id = 0;
+        private double target_y = 0.0;
+        private double last_animated_val = 0.0;
 
         public FadingBox (Orientation orientation = Orientation.VERTICAL, int spacing = 0) {
             Object (orientation: orientation, spacing: spacing);
@@ -19,9 +25,15 @@ namespace Poisk.UI {
         }
 
         public void attach_scrolled_window (ScrolledWindow scroll) {
-            if (target_scroll != null && adj_notify_conn != 0) {
-                target_scroll.disconnect (adj_notify_conn);
-                adj_notify_conn = 0;
+            if (target_scroll != null) {
+                if (adj_notify_conn != 0) {
+                    target_scroll.disconnect (adj_notify_conn);
+                    adj_notify_conn = 0;
+                }
+                if (scroll_controller != null) {
+                    target_scroll.remove_controller (scroll_controller);
+                    scroll_controller = null;
+                }
             }
 
             target_scroll = scroll;
@@ -30,10 +42,50 @@ namespace Poisk.UI {
                     bind_adjustment ();
                 });
                 bind_adjustment ();
+                setup_smooth_scroll_controller ();
             }
         }
 
+        private void setup_smooth_scroll_controller () {
+            if (target_scroll == null) return;
+
+            scroll_controller = new EventControllerScroll (
+                EventControllerScrollFlags.VERTICAL | 
+                EventControllerScrollFlags.DISCRETE | 
+                EventControllerScrollFlags.KINETIC |
+                EventControllerScrollFlags.BOTH_AXES
+            );
+            scroll_controller.propagation_phase = PropagationPhase.CAPTURE;
+
+            scroll_controller.scroll.connect ((dx, dy) => {
+                if (current_vadj == null || dy == 0.0) return false;
+
+                double max_scroll = double.max (current_vadj.upper - current_vadj.page_size, 0.0);
+                if (max_scroll <= 0.0) return false;
+
+                // Sync target_y if animation was idle
+                if (tick_id == 0) {
+                    target_y = current_vadj.get_value ();
+                }
+
+                double step_px = 0.0;
+                if (scroll_controller.get_unit () == Gdk.ScrollUnit.WHEEL) {
+                    step_px = dy * 68.0;
+                } else {
+                    step_px = dy * 1.5;
+                }
+
+                target_y = (target_y + step_px).clamp (0.0, max_scroll);
+                start_animation ();
+                return true;
+            });
+
+            target_scroll.add_controller (scroll_controller);
+        }
+
         private void bind_adjustment () {
+            stop_animation ();
+
             if (current_vadj != null) {
                 if (val_conn != 0) {
                     current_vadj.disconnect (val_conn);
@@ -49,14 +101,100 @@ namespace Poisk.UI {
             if (target_scroll != null) {
                 current_vadj = target_scroll.vadjustment;
                 if (current_vadj != null) {
+                    target_y = current_vadj.get_value ();
+                    last_animated_val = target_y;
+
                     val_conn = current_vadj.value_changed.connect (() => {
+                        // If external code adjusted value (not our animation tick), sync target_y
+                        if (tick_id == 0 || Math.fabs (current_vadj.get_value () - last_animated_val) > 1.5) {
+                            target_y = current_vadj.get_value ();
+                        }
                         this.queue_draw ();
                     });
+
                     chg_conn = current_vadj.changed.connect (() => {
                         this.queue_draw ();
                     });
                 }
             }
+        }
+
+        public void scroll_to_smooth (double dest_y) {
+            if (current_vadj == null) return;
+            double max_scroll = double.max (current_vadj.upper - current_vadj.page_size, 0.0);
+            target_y = dest_y.clamp (0.0, max_scroll);
+            start_animation ();
+        }
+
+        public void scroll_to_child (Widget child) {
+            if (target_scroll == null || current_vadj == null) return;
+
+            var p_in = Graphene.Point ();
+            p_in.init (0.0f, 0.0f);
+            Graphene.Point p_out;
+            if (!child.compute_point (target_scroll, p_in, out p_out)) {
+                return;
+            }
+
+            double child_top = p_out.y;
+            double child_h = (double) child.get_height ();
+            double page_size = current_vadj.get_page_size ();
+
+            double margin = 28.0;
+            if (child_top < margin) {
+                double dest = current_vadj.get_value () + child_top - margin;
+                scroll_to_smooth (dest);
+            } else if (child_top + child_h + margin > page_size) {
+                double dest = current_vadj.get_value () + child_top + child_h + margin - page_size;
+                scroll_to_smooth (dest);
+            }
+        }
+
+        public void reset_scroll () {
+            stop_animation ();
+            if (current_vadj != null) {
+                target_y = 0.0;
+                last_animated_val = 0.0;
+                current_vadj.set_value (0.0);
+            }
+        }
+
+        private void start_animation () {
+            if (tick_id != 0) return;
+            tick_id = this.add_tick_callback (on_tick);
+        }
+
+        private void stop_animation () {
+            if (tick_id != 0) {
+                this.remove_tick_callback (tick_id);
+                tick_id = 0;
+            }
+        }
+
+        private bool on_tick (Widget widget, Gdk.FrameClock frame_clock) {
+            if (current_vadj == null) {
+                tick_id = 0;
+                return Source.REMOVE;
+            }
+
+            double current = current_vadj.get_value ();
+            double diff = target_y - current;
+
+            if (Math.fabs (diff) < 0.6) {
+                current_vadj.set_value (target_y);
+                last_animated_val = target_y;
+                tick_id = 0;
+                return Source.REMOVE;
+            }
+
+            double step = diff * 0.22;
+            if (Math.fabs (step) < 0.5) {
+                step = (diff > 0) ? 0.5 : -0.5;
+            }
+
+            last_animated_val = current + step;
+            current_vadj.set_value (last_animated_val);
+            return Source.CONTINUE;
         }
 
         public override void snapshot (Gtk.Snapshot snapshot) {

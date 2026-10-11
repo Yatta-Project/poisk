@@ -107,6 +107,7 @@ namespace Poisk.UI {
         }
 
         public void set_items (List<SearchItem> items) {
+            fading_box.reset_scroll ();
             all_cards = new List<AppGridItem> ();
             selected_card_index = -1;
 
@@ -234,7 +235,7 @@ namespace Poisk.UI {
             var curr_fb = curr_card.get_parent () as FlowBox;
             if (curr_fb != null) {
                 curr_fb.select_child (curr_card);
-                curr_card.grab_focus ();
+                fading_box.scroll_to_child (curr_card);
             }
         }
 
