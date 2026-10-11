@@ -1,0 +1,15 @@
+[Desktop Entry]
+Name=Параметры Поиска
+Name[en]=Poisk Preferences
+GenericName=Launcher Preferences
+GenericName[ru]=Параметры лаунчера
+Comment=Настройка параметров и внешнего вида лаунчера Поиск
+Comment[en]=Configure Poisk launcher appearance and behavior
+Exec=poisk --preferences
+Icon=preferences-system
+Terminal=false
+Type=Application
+Categories=Settings;DesktopSettings;Utility;
+Keywords=launcher;command;palette;search;settings;preferences;poisk;поиск;параметры;настройки;
+StartupNotify=true
+StartupWMClass=io.github.mrlogiousbanana.poisk.preferences

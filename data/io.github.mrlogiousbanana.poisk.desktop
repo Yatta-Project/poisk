@@ -20,5 +20,5 @@ Actions=preferences;
 [Desktop Action preferences]
 Name=Параметры
 Name[en]=Preferences
-Exec=io.elementary.settings settings://desktop/poisk
+Exec=poisk --preferences
 Icon=preferences-system

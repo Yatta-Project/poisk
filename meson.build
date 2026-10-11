@@ -121,6 +121,7 @@ endif
 
 install_data(
   'data/io.github.mrlogiousbanana.poisk.desktop',
+  'data/io.github.mrlogiousbanana.poisk.preferences.desktop',
   install_dir: get_option('datadir') / 'applications',
 )
 

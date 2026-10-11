@@ -9,6 +9,7 @@ namespace Poisk.UI {
         private GLib.Settings? wingpanel_settings = null;
         private GLib.Settings? mutter_settings = null;
         private GLib.Settings? media_keys = null;
+        private GLib.Settings? cinnamon_keybindings = null;
         private Adw.Clamp clamp;
         private Box content_box;
         private Adw.PreferencesPage? target_page = null;
@@ -74,6 +75,9 @@ namespace Poisk.UI {
                 }
                 if (schema_source.lookup ("org.gnome.settings-daemon.plugins.media-keys", true) != null) {
                     media_keys = new GLib.Settings ("org.gnome.settings-daemon.plugins.media-keys");
+                }
+                if (schema_source.lookup ("org.cinnamon.desktop.keybindings", true) != null) {
+                    cinnamon_keybindings = new GLib.Settings ("org.cinnamon.desktop.keybindings");
                 }
             }
 
@@ -582,6 +586,34 @@ namespace Poisk.UI {
                     }
                 }
             }
+
+            if (cinnamon_keybindings != null) {
+                try {
+                    string[] current = cinnamon_keybindings.get_strv ("custom-list");
+                    bool exists = false;
+                    foreach (var item in current) {
+                        if (item == "custom-poisk") {
+                            exists = true;
+                            break;
+                        }
+                    }
+                    if (!exists) {
+                        string[] updated = current;
+                        updated += "custom-poisk";
+                        cinnamon_keybindings.set_strv ("custom-list", updated);
+                    }
+
+                    string kb_path = "/org/cinnamon/desktop/keybindings/custom-keybindings/custom-poisk/";
+                    var poisk_kb = new GLib.Settings.with_path ("org.cinnamon.desktop.keybindings.custom-keybinding", kb_path);
+                    poisk_kb.set_string ("name", "Poisk");
+                    poisk_kb.set_string ("command", "poisk --toggle");
+                    string cinnamon_binding = (accel_name == "Super" || accel_name == "Super_L" || accel_name == "Super_R") ? "Super_L" : accel_name;
+                    string[] bindings = { cinnamon_binding };
+                    poisk_kb.set_strv ("binding", bindings);
+                } catch (Error e) {
+                    warning ("Failed to configure Cinnamon custom-keybinding: %s", e.message);
+                }
+            }
         }
 
         private void set_autostart_enabled (bool enable) {
@@ -602,7 +634,7 @@ Terminal=false
 Type=Application
 Categories=Utility;Core;
 X-GNOME-Autostart-enabled=true
-NoDisplay=true
+NoDisplay=false
 """;
                     FileUtils.set_contents (autostart_path, desktop_content);
                 } catch (Error e) {
