@@ -896,38 +896,39 @@ namespace Poisk.UI {
 
                 /* Search Results List Typography */
                 .poisk-row-title {
-                    font-size: 14.5px;
-                    font-weight: 600;
+                    font-size: 13.5px;
+                    font-weight: 500;
                     color: @theme_fg_color;
                 }
                 .poisk-row-subtitle {
-                    font-size: 12px;
-                    opacity: 0.68;
+                    font-size: 11.5px;
+                    opacity: 0.60;
                 }
                 .poisk-row-badge {
-                    font-size: 13px;
+                    font-size: 11.5px;
                     font-weight: 500;
-                    opacity: 0.80;
+                    opacity: 0.65;
                 }
 
                 /* Menu Category Headers */
                 .poisk-category-emoji {
-                    font-size: 17px;
+                    font-size: 14px;
                     margin-right: 2px;
                 }
                 .poisk-category-title {
-                    font-size: 15px;
-                    font-weight: 700;
+                    font-size: 13px;
+                    font-weight: 600;
                     color: @theme_fg_color;
+                    opacity: 0.90;
                 }
                 .poisk-category-count {
-                    font-size: 12px;
-                    font-weight: 600;
-                    opacity: 0.60;
-                    margin-right: 6px;
+                    font-size: 11px;
+                    font-weight: 500;
+                    opacity: 0.50;
+                    margin-right: 4px;
                 }
                 .poisk-category-separator {
-                    opacity: 0.30;
+                    opacity: 0.20;
                     min-height: 1px;
                 }
             """;

@@ -150,8 +150,8 @@ namespace Poisk.UI {
             var badge_box = new Box (Orientation.HORIZONTAL, 0);
             badge_box.valign = Align.CENTER;
             badge_box.halign = Align.END;
-            badge_box.margin_start = 16;
-            badge_box.set_size_request (150, -1);
+            badge_box.margin_start = 12;
+            badge_box.set_size_request (125, -1);
 
             badge_lbl = new Label (item.category);
             badge_lbl.halign = Align.END;
