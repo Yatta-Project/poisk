@@ -303,7 +303,39 @@ namespace Poisk.UI {
             }
             providers_group.add (calc_row);
 
-            // Group 4: About
+            // Group 4: Application Groups
+            var groups_prefs = new Adw.PreferencesGroup ();
+            groups_prefs.title = "Группы приложений";
+            groups_prefs.description = "Кастомные метки, скрытие и группировка в меню";
+            add_group (groups_prefs);
+
+            var group_menu_row = new Adw.SwitchRow ();
+            group_menu_row.title = "Группировать приложения в меню";
+            group_menu_row.subtitle = "Отображать приложения по секциям в режиме обзора (:menu)";
+            if (poisk_settings != null) {
+                poisk_settings.bind ("group-apps-in-menu", group_menu_row, "active", SettingsBindFlags.DEFAULT);
+            }
+            groups_prefs.add (group_menu_row);
+
+            var manage_groups_row = new Adw.ActionRow ();
+            manage_groups_row.title = "Настроить группы и скрытые приложения";
+            manage_groups_row.subtitle = "Изменение порядка, Drag & Drop и скрытие программ";
+            var manage_btn = new Button.with_label ("Настроить...");
+            manage_btn.valign = Align.CENTER;
+            manage_btn.add_css_class ("suggested-action");
+            manage_btn.clicked.connect (() => {
+                try {
+                    string[] argv = { "poisk", "--manage-groups" };
+                    Process.spawn_async (null, argv, null, SpawnFlags.SEARCH_PATH, null, null);
+                } catch (Error e) {
+                    warning ("Failed to open group manager: %s", e.message);
+                }
+            });
+            manage_groups_row.add_suffix (manage_btn);
+            manage_groups_row.activatable_widget = manage_btn;
+            groups_prefs.add (manage_groups_row);
+
+            // Group 5: About
             var about_group = new Adw.PreferencesGroup ();
             about_group.title = "О программе";
             add_group (about_group);
@@ -317,12 +349,12 @@ namespace Poisk.UI {
             about_group.add (version_row);
 
             var repo_row = new Adw.ActionRow ();
-            repo_row.title = "Репозиторий Poisk";
-            repo_row.subtitle = "https://github.com/mrlogiousbanana/poisk";
+            repo_row.title = "Репозиторий Poisk (Yatta-Project)";
+            repo_row.subtitle = "https://github.com/Yatta-Project/poisk";
             var open_repo_btn = new Button.from_icon_name ("external-link-symbolic");
             open_repo_btn.valign = Align.CENTER;
             open_repo_btn.clicked.connect (() => {
-                open_url ("https://github.com/mrlogiousbanana/poisk");
+                open_url ("https://github.com/Yatta-Project/poisk");
             });
             repo_row.add_suffix (open_repo_btn);
             about_group.add (repo_row);

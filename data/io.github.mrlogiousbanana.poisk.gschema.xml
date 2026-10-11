@@ -51,5 +51,15 @@
       <summary>Activation shortcut or key name</summary>
       <description>Custom accelerator (e.g. 'Super', '&lt;Super&gt;space', '&lt;Control&gt;space', 'F12')</description>
     </key>
+    <key name="group-apps-in-menu" type="b">
+      <default>true</default>
+      <summary>Group applications in menu by category</summary>
+      <description>Whether to organize applications under group sections in the menu grid</description>
+    </key>
+    <key name="groups-version" type="x">
+      <default>0</default>
+      <summary>Application groups config revision</summary>
+      <description>Monotonically increasing version counter for app groups synchronization</description>
+    </key>
   </schema>
 </schemalist>

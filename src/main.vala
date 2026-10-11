@@ -21,6 +21,7 @@ namespace Poisk {
         }
 
         private PoiskPreferencesWindow? prefs_window = null;
+        private GroupManagerDialog? groups_window = null;
 
         public void show_preferences () {
             if (prefs_window == null) {
@@ -31,6 +32,18 @@ namespace Poisk {
                 });
             }
             prefs_window.present ();
+        }
+
+        public void show_manage_groups () {
+            if (groups_window == null) {
+                Gtk.Window? parent = (prefs_window != null && prefs_window.visible) ? (Gtk.Window) prefs_window : (Gtk.Window?) window;
+                groups_window = new GroupManagerDialog (parent);
+                groups_window.close_request.connect (() => {
+                    groups_window = null;
+                    return false;
+                });
+            }
+            groups_window.present ();
         }
 
         protected override void startup () {
@@ -106,6 +119,9 @@ namespace Poisk {
                 } else if (arg == "--preferences" || arg == "-p" || arg == "--settings") {
                     show_preferences ();
                     return 0;
+                } else if (arg == "--manage-groups" || arg == "-g" || arg == "--groups") {
+                    show_manage_groups ();
+                    return 0;
                 } else if (arg == "--quit" || arg == "-q") {
                     if (window != null) {
                         window.destroy ();
@@ -116,16 +132,10 @@ namespace Poisk {
                     // Daemon mode: stay resident in background without opening window
                     return 0;
                 } else if (arg == "--help" || arg == "-h") {
-                    command_line.print ("Поиск (Poisk) — быстрый лаунчер для Pantheon и Linux\n\nИспользование:\n  poisk [ОПЦИИ]\n\nОпции:\n  -t, --toggle        Показать / скрыть палитру поиска\n  -p, --preferences   Открыть параметры Поиска\n  -b, --background    Запустить в фоновом режиме (демон)\n  -q, --quit          Завершить фоновый процесс лаунчера\n  -v, --version       Показать версию\n  -h, --help          Показать эту справку\n");
-                    if (window == null) {
-                        this.quit ();
-                    }
+                    command_line.print ("Поиск (Poisk) — быстрый лаунчер для Pantheon и Linux\n\nИспользование:\n  poisk [ОПЦИИ]\n\nОпции:\n  -t, --toggle        Показать / скрыть палитру поиска\n  -p, --preferences   Открыть параметры Поиска\n  -g, --manage-groups Настроить группы и скрытые приложения\n  -b, --background    Запустить в фоновом режиме (демон)\n  -q, --quit          Завершить фоновый процесс лаунчера\n  -v, --version       Показать версию\n  -h, --help          Показать эту справку\n");
                     return 0;
                 } else if (arg == "--version" || arg == "-v") {
                     command_line.print ("Poisk 1.0.0\nhttps://github.com/mrlogiousbanana/poisk\nОсновано на концепциях Vicinae (https://github.com/vicinaehq/vicinae)\n");
-                    if (window == null) {
-                        this.quit ();
-                    }
                     return 0;
                 }
             }

@@ -30,6 +30,7 @@ namespace Poisk.Providers {
         public async List<SearchItem> search (string query_text, Cancellable? cancellable = null) {
             var items = new List<SearchItem> ();
             var db = Database.get_default ();
+            var group_manager = AppGroupManager.get_default ();
 
             foreach (unowned AppInfo app in cached_apps) {
                 if (cancellable != null && cancellable.is_cancelled ()) break;
@@ -38,6 +39,13 @@ namespace Poisk.Providers {
                 string desc = app.get_description () ?? "";
                 string exec = app.get_executable () ?? "";
                 string app_id = app.get_id () ?? name;
+
+                // 1. Skip hidden applications completely
+                if (group_manager.is_app_hidden (app_id)) {
+                    continue;
+                }
+
+                string group_name = group_manager.get_app_group_name (app_id);
 
                 int score = 0;
                 if (query_text.length == 0) {
@@ -52,8 +60,13 @@ namespace Poisk.Providers {
                     int name_score = SearchEngine.fuzzy_score (query_text, name);
                     int exec_score = SearchEngine.fuzzy_score (query_text, exec);
                     int desc_score = desc.length > 0 ? (SearchEngine.fuzzy_score (query_text, desc) / 2) : 0;
+                    int group_score = SearchEngine.fuzzy_score (query_text, group_name);
                     
                     score = int.max (name_score, int.max (exec_score, desc_score));
+                    if (group_score > 0) {
+                        score = int.max (score, group_score + 150);
+                    }
+
                     if (score > 0) {
                         int usage = db.get_app_usage_count (app_id);
                         score += int.min (usage * 15, 300); // Frequency boost
@@ -72,15 +85,16 @@ namespace Poisk.Providers {
                         name,
                         desc.length > 0 ? desc : exec,
                         icon_name,
-                        "Applications"
+                        group_name
                     );
                     item.score = score;
                     item.action_label = "Launch Application";
                     item.provider = this;
                     item.target_object = app;
-                    item.preview_text = "<b>%s</b>\n\n%s\n\nCommand: <tt>%s</tt>\nDesktop File: <tt>%s</tt>".printf (
+                    item.preview_text = "<b>%s</b>\n\n%s\n\nGroup: <tt>%s</tt>\nCommand: <tt>%s</tt>\nDesktop File: <tt>%s</tt>".printf (
                         Markup.escape_text (name),
                         Markup.escape_text (desc.length > 0 ? desc : "No description available"),
+                        Markup.escape_text (group_name),
                         Markup.escape_text (exec),
                         Markup.escape_text (app_id)
                     );
@@ -94,11 +108,19 @@ namespace Poisk.Providers {
 
         public List<SearchItem> get_all_applications () {
             var items = new List<SearchItem> ();
+            var group_manager = AppGroupManager.get_default ();
+
             foreach (unowned AppInfo app in cached_apps) {
                 string name = app.get_display_name () ?? app.get_name () ?? "";
                 string desc = app.get_description () ?? "";
                 string exec = app.get_executable () ?? "";
                 string app_id = app.get_id () ?? name;
+
+                if (group_manager.is_app_hidden (app_id)) {
+                    continue;
+                }
+
+                string group_name = group_manager.get_app_group_name (app_id);
 
                 string icon_name = "application-x-executable";
                 var icon = app.get_icon ();
@@ -111,7 +133,7 @@ namespace Poisk.Providers {
                     name,
                     desc.length > 0 ? desc : exec,
                     icon_name,
-                    "Applications"
+                    group_name
                 );
                 item.action_label = "Launch Application";
                 item.provider = this;
@@ -120,6 +142,19 @@ namespace Poisk.Providers {
             }
             items.sort ((a, b) => a.title.collate (b.title));
             return items;
+        }
+
+        public List<AppInfo> get_all_installed_app_infos () {
+            var list = new List<AppInfo> ();
+            foreach (unowned AppInfo app in cached_apps) {
+                list.append (app);
+            }
+            list.sort ((a, b) => {
+                string an = a.get_display_name () ?? a.get_name () ?? "";
+                string bn = b.get_display_name () ?? b.get_name () ?? "";
+                return an.collate (bn);
+            });
+            return list;
         }
 
         public void activate (SearchItem item) {

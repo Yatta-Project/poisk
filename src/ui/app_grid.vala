@@ -45,7 +45,11 @@ namespace Poisk.UI {
 
     public class AppGrid : Box {
         private ScrolledWindow scroll;
-        private FlowBox flow_box;
+        private Box content_box;
+        private List<AppGridItem> all_cards = new List<AppGridItem> ();
+        private int selected_card_index = -1;
+        private GLib.Settings? poisk_settings = null;
+
         public signal void item_activated (SearchItem item);
 
         public AppGrid () {
@@ -53,113 +57,211 @@ namespace Poisk.UI {
             this.hexpand = true;
             this.vexpand = true;
 
+            var schema_source = SettingsSchemaSource.get_default ();
+            if (schema_source != null && schema_source.lookup ("io.github.mrlogiousbanana.poisk", true) != null) {
+                poisk_settings = new GLib.Settings ("io.github.mrlogiousbanana.poisk");
+            }
+
             scroll = new ScrolledWindow ();
             scroll.hscrollbar_policy = PolicyType.NEVER;
             scroll.hexpand = true;
             scroll.vexpand = true;
 
-            flow_box = new FlowBox ();
-            flow_box.selection_mode = SelectionMode.SINGLE;
-            flow_box.max_children_per_line = 6;
-            flow_box.min_children_per_line = 5;
-            flow_box.homogeneous = true;
-            flow_box.column_spacing = 10;
-            flow_box.row_spacing = 10;
-            flow_box.margin_start = 16;
-            flow_box.margin_end = 16;
-            flow_box.margin_top = 12;
-            flow_box.margin_bottom = 16;
-            flow_box.halign = Align.CENTER;
-            flow_box.valign = Align.START;
+            content_box = new Box (Orientation.VERTICAL, 12);
+            content_box.hexpand = true;
+            content_box.margin_top = 8;
+            content_box.margin_bottom = 16;
+            content_box.margin_start = 12;
+            content_box.margin_end = 12;
 
-            flow_box.child_activated.connect ((child) => {
+            scroll.set_child (content_box);
+            this.append (scroll);
+        }
+
+        private FlowBox create_flow_box () {
+            var fb = new FlowBox ();
+            fb.selection_mode = SelectionMode.SINGLE;
+            fb.max_children_per_line = 6;
+            fb.min_children_per_line = 5;
+            fb.homogeneous = true;
+            fb.column_spacing = 10;
+            fb.row_spacing = 10;
+            fb.halign = Align.CENTER;
+            fb.valign = Align.START;
+
+            fb.child_activated.connect ((child) => {
                 if (child is AppGridItem) {
                     var card = (AppGridItem) child;
                     item_activated (card.item);
                 }
             });
 
-            scroll.set_child (flow_box);
-            this.append (scroll);
+            return fb;
         }
 
         public void set_items (List<SearchItem> items) {
-            Widget? child = flow_box.get_first_child ();
+            all_cards = new List<AppGridItem> ();
+            selected_card_index = -1;
+
+            // Clear previous widgets
+            Widget? child = content_box.get_first_child ();
             while (child != null) {
                 Widget? next = child.get_next_sibling ();
-                flow_box.remove (child);
+                content_box.remove (child);
                 child = next;
             }
 
-            foreach (var item in items) {
-                var card = new AppGridItem (item);
-                flow_box.append (card);
+            bool group_in_menu = true;
+            if (poisk_settings != null) {
+                group_in_menu = poisk_settings.get_boolean ("group-apps-in-menu");
             }
 
-            var first = flow_box.get_child_at_index (0);
-            if (first != null) {
-                flow_box.select_child (first);
+            var group_manager = AppGroupManager.get_default ();
+
+            if (!group_in_menu) {
+                // Flat mode without category headers
+                var flow_box = create_flow_box ();
+                flow_box.margin_start = 8;
+                flow_box.margin_end = 8;
+
+                foreach (var item in items) {
+                    var card = new AppGridItem (item);
+                    flow_box.append (card);
+                    all_cards.append (card);
+                }
+                content_box.append (flow_box);
+            } else {
+                // Grouped mode: iterate over configured groups
+                var groups = group_manager.get_groups ();
+                var processed_items = new HashTable<string, bool> (str_hash, str_equal);
+
+                foreach (var g in groups) {
+                    if (g.is_hidden) continue;
+
+                    var group_items = new List<SearchItem> ();
+                    foreach (var item in items) {
+                        string gid = group_manager.get_app_group_id (item.id);
+                        if (gid == g.id) {
+                            group_items.append (item);
+                            processed_items.insert (item.id, true);
+                        }
+                    }
+
+                    if (group_items.length () > 0) {
+                        // Group Section Header
+                        var header_box = new Box (Orientation.HORIZONTAL, 8);
+                        header_box.margin_start = 14;
+                        header_box.margin_top = 10;
+                        header_box.margin_bottom = 4;
+                        header_box.valign = Align.CENTER;
+
+                        var icon = new Image.from_icon_name (g.icon_name);
+                        icon.pixel_size = 16;
+                        icon.opacity = 0.70;
+                        header_box.append (icon);
+
+                        var title = new Label (g.name);
+                        title.add_css_class ("heading");
+                        title.add_css_class ("caption");
+                        title.opacity = 0.85;
+                        header_box.append (title);
+
+                        var count_badge = new Label ("%u".printf (group_items.length ()));
+                        count_badge.add_css_class ("dim-label");
+                        count_badge.add_css_class ("caption");
+                        header_box.append (count_badge);
+
+                        content_box.append (header_box);
+
+                        // Grid for this group
+                        var flow_box = create_flow_box ();
+                        foreach (var item in group_items) {
+                            var card = new AppGridItem (item);
+                            flow_box.append (card);
+                            all_cards.append (card);
+                        }
+                        content_box.append (flow_box);
+                    }
+                }
+
+                // Any leftover items not matched in existing groups
+                var leftover = new List<SearchItem> ();
+                foreach (var item in items) {
+                    if (!processed_items.contains (item.id)) {
+                        leftover.append (item);
+                    }
+                }
+                if (leftover.length () > 0) {
+                    var flow_box = create_flow_box ();
+                    foreach (var item in leftover) {
+                        var card = new AppGridItem (item);
+                        flow_box.append (card);
+                        all_cards.append (card);
+                    }
+                    content_box.append (flow_box);
+                }
+            }
+
+            if (all_cards.length () > 0) {
+                select_index (0);
+            }
+        }
+
+        private void select_index (int idx) {
+            if (idx < 0 || idx >= (int) all_cards.length ()) return;
+
+            // Unselect previous
+            if (selected_card_index >= 0 && selected_card_index < (int) all_cards.length ()) {
+                var prev_card = all_cards.nth_data (selected_card_index);
+                var prev_fb = prev_card.get_parent () as FlowBox;
+                if (prev_fb != null) {
+                    prev_fb.unselect_child (prev_card);
+                }
+            }
+
+            selected_card_index = idx;
+            var curr_card = all_cards.nth_data (selected_card_index);
+            var curr_fb = curr_card.get_parent () as FlowBox;
+            if (curr_fb != null) {
+                curr_fb.select_child (curr_card);
+                curr_card.grab_focus ();
             }
         }
 
         public void select_next () {
-            var selected = flow_box.get_selected_children ();
-            int idx = 0;
-            if (selected != null && selected.data != null) {
-                idx = ((FlowBoxChild) selected.data).get_index () + 1;
-            }
-            var next = flow_box.get_child_at_index (idx);
-            if (next != null) {
-                flow_box.select_child (next);
+            if (all_cards.length () == 0) return;
+            int next = (selected_card_index < 0) ? 0 : selected_card_index + 1;
+            if (next < (int) all_cards.length ()) {
+                select_index (next);
             }
         }
 
         public void select_prev () {
-            var selected = flow_box.get_selected_children ();
-            if (selected != null && selected.data != null) {
-                int idx = ((FlowBoxChild) selected.data).get_index () - 1;
-                if (idx >= 0) {
-                    var prev = flow_box.get_child_at_index (idx);
-                    if (prev != null) {
-                        flow_box.select_child (prev);
-                    }
-                }
-            }
+            if (all_cards.length () == 0) return;
+            int prev = (selected_card_index <= 0) ? 0 : selected_card_index - 1;
+            select_index (prev);
         }
 
         public void select_down () {
-            var selected = flow_box.get_selected_children ();
-            int idx = 0;
-            if (selected != null && selected.data != null) {
-                idx = ((FlowBoxChild) selected.data).get_index () + 5;
+            if (all_cards.length () == 0) return;
+            int next = (selected_card_index < 0) ? 0 : selected_card_index + 5;
+            if (next >= (int) all_cards.length ()) {
+                next = (int) all_cards.length () - 1;
             }
-            var next = flow_box.get_child_at_index (idx);
-            if (next != null) {
-                flow_box.select_child (next);
-            }
+            select_index (next);
         }
 
         public void select_up () {
-            var selected = flow_box.get_selected_children ();
-            if (selected != null && selected.data != null) {
-                int idx = ((FlowBoxChild) selected.data).get_index () - 5;
-                if (idx >= 0) {
-                    var prev = flow_box.get_child_at_index (idx);
-                    if (prev != null) {
-                        flow_box.select_child (prev);
-                    }
-                }
-            }
+            if (all_cards.length () == 0) return;
+            int prev = (selected_card_index < 0) ? 0 : selected_card_index - 5;
+            if (prev < 0) prev = 0;
+            select_index (prev);
         }
 
         public void activate_selected () {
-            var selected = flow_box.get_selected_children ();
-            if (selected != null && selected.data != null) {
-                var child = (FlowBoxChild) selected.data;
-                if (child is AppGridItem) {
-                    var card = (AppGridItem) child;
-                    item_activated (card.item);
-                }
+            if (selected_card_index >= 0 && selected_card_index < (int) all_cards.length ()) {
+                var card = all_cards.nth_data (selected_card_index);
+                item_activated (card.item);
             }
         }
     }

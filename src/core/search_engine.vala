@@ -45,6 +45,15 @@ namespace Poisk.Core {
             return new List<SearchItem> ();
         }
 
+        public List<AppInfo> get_all_installed_app_infos () {
+            foreach (unowned SearchProvider provider in providers) {
+                if (provider is Poisk.Providers.AppProvider) {
+                    return ((Poisk.Providers.AppProvider) provider).get_all_installed_app_infos ();
+                }
+            }
+            return new List<AppInfo> ();
+        }
+
         public static int fuzzy_score (string pattern, string text) {
             if (pattern.length == 0) return 100;
             if (text.length == 0) return 0;

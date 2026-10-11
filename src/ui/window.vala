@@ -941,7 +941,8 @@ namespace Poisk.UI {
                     if (filter.length == 0) {
                         filtered.append (app);
                     } else if (SearchEngine.fuzzy_score (filter, app.title) > 0 ||
-                               SearchEngine.fuzzy_score (filter, app.subtitle) > 0) {
+                               SearchEngine.fuzzy_score (filter, app.subtitle) > 0 ||
+                               SearchEngine.fuzzy_score (filter, app.category) > 0) {
                         filtered.append (app);
                     }
                 }
