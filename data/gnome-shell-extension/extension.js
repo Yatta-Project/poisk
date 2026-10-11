@@ -28,6 +28,27 @@ const DBUS_IFACE = `
   </interface>
 </node>`;
 
+const WINDOWS_DBUS_IFACE = `
+<node>
+  <interface name="org.gnome.Shell.Extensions.Windows">
+    <method name="list">
+      <arg type="s" direction="out" name="windows"/>
+    </method>
+    <method name="activate">
+      <arg type="u" direction="in" name="winid"/>
+    </method>
+    <method name="close">
+      <arg type="u" direction="in" name="winid"/>
+    </method>
+    <method name="minimize">
+      <arg type="u" direction="in" name="winid"/>
+    </method>
+    <method name="maximize">
+      <arg type="u" direction="in" name="winid"/>
+    </method>
+  </interface>
+</node>`;
+
 export default class PoiskBlurExtension extends Extension {
     enable() {
         this._isIsland = false;
@@ -38,9 +59,22 @@ export default class PoiskBlurExtension extends Extension {
         this._activeEffects = new Map();
         this._subActors = new Map();
 
-        // Export D-Bus interface
+        // Export D-Bus interfaces
         this._dbusImpl = Gio.DBusExportedObject.wrapJSObject(DBUS_IFACE, this);
         this._dbusImpl.export(Gio.DBus.session, '/org/gnome/Shell/Extensions/PoiskBlur');
+
+        this._windowsDbusImpl = Gio.DBusExportedObject.wrapJSObject(WINDOWS_DBUS_IFACE, {
+            list: () => this.listWindows(),
+            activate: (winid) => this.activateWindow(winid),
+            close: (winid) => this.closeWindow(winid),
+            minimize: (winid) => this.minimizeWindow(winid),
+            maximize: (winid) => this.maximizeWindow(winid)
+        });
+        try {
+            this._windowsDbusImpl.export(Gio.DBus.session, '/org/gnome/Shell/Extensions/Windows');
+        } catch (e) {
+            console.warn('[Poisk] Could not export /org/gnome/Shell/Extensions/Windows:', e);
+        }
 
         // Watch for window-created signals
         this._windowCreatedId = global.display.connect('window-created', (display, window) => {
@@ -67,6 +101,82 @@ export default class PoiskBlurExtension extends Extension {
         if (this._dbusImpl) {
             this._dbusImpl.unexport();
             this._dbusImpl = null;
+        }
+
+        if (this._windowsDbusImpl) {
+            this._windowsDbusImpl.unexport();
+            this._windowsDbusImpl = null;
+        }
+    }
+
+    listWindows() {
+        const list = [];
+        for (const actor of global.get_window_actors()) {
+            const w = actor.meta_window;
+            if (!w || (typeof w.is_skip_taskbar === 'function' && w.is_skip_taskbar())) continue;
+            const ws = typeof w.get_workspace === 'function' ? w.get_workspace() : null;
+            const wsIndex = ws && typeof ws.index === 'function' ? ws.index() : 0;
+            const id = (typeof w.get_id === 'function') ? w.get_id() :
+                       ((typeof w.get_xwindow === 'function') ? w.get_xwindow() : 0);
+            list.push({
+                id: id,
+                title: (typeof w.get_title === 'function') ? (w.get_title() || '') : '',
+                wm_class: (typeof w.get_wm_class === 'function') ? (w.get_wm_class() || '') : '',
+                workspace: wsIndex
+            });
+        }
+        return JSON.stringify(list);
+    }
+
+    activateWindow(winid) {
+        for (const actor of global.get_window_actors()) {
+            const w = actor.meta_window;
+            if (!w) continue;
+            const id = (typeof w.get_id === 'function') ? w.get_id() :
+                       ((typeof w.get_xwindow === 'function') ? w.get_xwindow() : 0);
+            if (id === winid) {
+                w.activate(global.get_current_time());
+                break;
+            }
+        }
+    }
+
+    closeWindow(winid) {
+        for (const actor of global.get_window_actors()) {
+            const w = actor.meta_window;
+            if (!w) continue;
+            const id = (typeof w.get_id === 'function') ? w.get_id() :
+                       ((typeof w.get_xwindow === 'function') ? w.get_xwindow() : 0);
+            if (id === winid) {
+                w.delete(global.get_current_time());
+                break;
+            }
+        }
+    }
+
+    minimizeWindow(winid) {
+        for (const actor of global.get_window_actors()) {
+            const w = actor.meta_window;
+            if (!w) continue;
+            const id = (typeof w.get_id === 'function') ? w.get_id() :
+                       ((typeof w.get_xwindow === 'function') ? w.get_xwindow() : 0);
+            if (id === winid) {
+                w.minimize();
+                break;
+            }
+        }
+    }
+
+    maximizeWindow(winid) {
+        for (const actor of global.get_window_actors()) {
+            const w = actor.meta_window;
+            if (!w) continue;
+            const id = (typeof w.get_id === 'function') ? w.get_id() :
+                       ((typeof w.get_xwindow === 'function') ? w.get_xwindow() : 0);
+            if (id === winid) {
+                w.maximize(Meta.MaximizeFlags.BOTH);
+                break;
+            }
         }
     }
 
