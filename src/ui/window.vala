@@ -713,7 +713,6 @@ namespace Poisk.UI {
                     background: alpha(currentColor, 0.15);
                     min-width: 1px;
                     min-height: 24px;
-                    max-height: 24px;
                     border: none;
                     padding: 0;
                     margin-top: 16px;
