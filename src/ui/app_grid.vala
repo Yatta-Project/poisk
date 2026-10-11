@@ -169,11 +169,6 @@ namespace Poisk.UI {
                         title.add_css_class ("poisk-category-title");
                         header_box.append (title);
 
-                        // Count badge
-                        var count_badge = new Label ("%u".printf (group_items.length ()));
-                        count_badge.add_css_class ("poisk-category-count");
-                        header_box.append (count_badge);
-
                         // Separator line: Рабочие ------------------------------------
                         var sep = new Separator (Orientation.HORIZONTAL);
                         sep.hexpand = true;

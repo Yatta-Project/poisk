@@ -920,12 +920,6 @@ namespace Poisk.UI {
                     color: @theme_fg_color;
                     opacity: 0.90;
                 }
-                .poisk-category-count {
-                    font-size: 11px;
-                    font-weight: 500;
-                    opacity: 0.50;
-                    margin-right: 4px;
-                }
                 .poisk-category-separator {
                     opacity: 0.20;
                     min-height: 1px;
