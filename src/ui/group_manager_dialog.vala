@@ -124,13 +124,10 @@ namespace Poisk.UI {
             handle_icon.opacity = 0.50;
             header_box.append (handle_icon);
 
-            // Group Icon
-            var group_icon = new Image.from_icon_name (group.icon_name);
-            group_icon.pixel_size = 20;
-            if (group.is_hidden) {
-                group_icon.add_css_class ("error");
-            }
-            header_box.append (group_icon);
+            // Group Emoji
+            var emoji_lbl = new Label (group.emoji);
+            emoji_lbl.add_css_class ("poisk-category-emoji");
+            header_box.append (emoji_lbl);
 
             // Title
             var title_lbl = new Label (group.name);
@@ -171,16 +168,17 @@ namespace Poisk.UI {
                 btn_box.append (down_btn);
             }
 
-            // Custom group actions (rename / delete)
-            if (!group.is_default && !group.is_hidden) {
-                var edit_btn = new Button.from_icon_name ("document-edit-symbolic");
-                edit_btn.add_css_class ("flat");
-                edit_btn.tooltip_text = "Переименовать группу";
-                edit_btn.clicked.connect (() => {
-                    prompt_rename_group (group);
-                });
-                btn_box.append (edit_btn);
+            // Edit button (for ALL groups including Основные and Скрытые)
+            var edit_btn = new Button.from_icon_name ("document-edit-symbolic");
+            edit_btn.add_css_class ("flat");
+            edit_btn.tooltip_text = "Настроить название и эмодзи группы";
+            edit_btn.clicked.connect (() => {
+                prompt_edit_group (group);
+            });
+            btn_box.append (edit_btn);
 
+            // Delete button (only for custom groups, protected from deleting Основные/Скрытые)
+            if (!group.is_default && !group.is_hidden) {
                 var del_btn = new Button.from_icon_name ("user-trash-symbolic");
                 del_btn.add_css_class ("flat");
                 del_btn.add_css_class ("destructive-action");
@@ -343,7 +341,8 @@ namespace Poisk.UI {
             foreach (var target_g in group_manager.get_groups ()) {
                 if (target_g.id == current_group_id) continue;
 
-                var btn = new Button.with_label (target_g.name);
+                string label_text = target_g.emoji.length > 0 ? (target_g.emoji + " " + target_g.name) : target_g.name;
+                var btn = new Button.with_label (label_text);
                 btn.add_css_class ("flat");
                 string tid = target_g.id;
                 btn.clicked.connect (() => {
@@ -380,26 +379,80 @@ namespace Poisk.UI {
             return count;
         }
 
+        private Widget build_group_editor_content (Entry emoji_entry, Entry name_entry, string initial_emoji, string initial_name) {
+            var container = new Box (Orientation.VERTICAL, 10);
+            container.margin_top = 8;
+            container.margin_bottom = 8;
+
+            var input_row = new Box (Orientation.HORIZONTAL, 8);
+
+            emoji_entry.text = initial_emoji;
+            emoji_entry.max_width_chars = 4;
+            emoji_entry.set_width_chars (4);
+            emoji_entry.tooltip_text = "Эмодзи категории";
+            input_row.append (emoji_entry);
+
+            name_entry.text = initial_name;
+            name_entry.placeholder_text = "Название группы...";
+            name_entry.hexpand = true;
+            input_row.append (name_entry);
+
+            container.append (input_row);
+
+            // Quick emoji picker buttons
+            var picker_label = new Label ("Быстрый выбор эмодзи:");
+            picker_label.halign = Align.START;
+            picker_label.add_css_class ("dim-label");
+            picker_label.add_css_class ("caption");
+            container.append (picker_label);
+
+            var emojis_flow = new FlowBox ();
+            emojis_flow.selection_mode = SelectionMode.NONE;
+            emojis_flow.max_children_per_line = 8;
+            emojis_flow.min_children_per_line = 5;
+            emojis_flow.column_spacing = 4;
+            emojis_flow.row_spacing = 4;
+
+            string[] quick_emojis = { "💼", "✨", "🎮", "🎨", "⚙️", "🛠️", "🌐", "📦", "📁", "📚", "🎵", "🚀", "💡", "🏷️", "👁️" };
+            foreach (var em in quick_emojis) {
+                var btn = new Button.with_label (em);
+                btn.add_css_class ("flat");
+                string cur_em = em;
+                btn.clicked.connect (() => {
+                    emoji_entry.text = cur_em;
+                    name_entry.grab_focus ();
+                });
+                emojis_flow.append (btn);
+            }
+            container.append (emojis_flow);
+
+            return container;
+        }
+
         private void on_add_group_clicked () {
-            var dialog = new Adw.MessageDialog (this, "Новая группа приложений", "Введите название для новой группы:");
+            var dialog = new Adw.MessageDialog (this, "Новая группа приложений", "Задайте эмодзи и название для новой группы:");
             dialog.add_response ("cancel", "Отмена");
             dialog.add_response ("create", "Создать");
             dialog.set_response_appearance ("create", Adw.ResponseAppearance.SUGGESTED);
 
-            var entry = new Entry ();
-            entry.placeholder_text = "Например: Разработка, Игры, Учёба";
-            entry.margin_top = 10;
-            entry.margin_bottom = 10;
-            entry.activate.connect (() => {
+            var emoji_entry = new Entry ();
+            var name_entry = new Entry ();
+
+            emoji_entry.activate.connect (() => {
+                name_entry.grab_focus ();
+            });
+            name_entry.activate.connect (() => {
                 dialog.response ("create");
             });
-            dialog.set_extra_child (entry);
+
+            dialog.set_extra_child (build_group_editor_content (emoji_entry, name_entry, "📁", ""));
 
             dialog.response.connect ((resp) => {
                 if (resp == "create") {
-                    string text = entry.get_text ().strip ();
+                    string text = name_entry.get_text ().strip ();
+                    string emoji = emoji_entry.get_text ().strip ();
                     if (text.length > 0) {
-                        group_manager.add_group (text);
+                        group_manager.add_group (text, emoji.length > 0 ? emoji : "📁");
                     }
                 }
             });
@@ -407,26 +460,31 @@ namespace Poisk.UI {
             dialog.present ();
         }
 
-        private void prompt_rename_group (AppGroup group) {
-            var dialog = new Adw.MessageDialog (this, "Переименование группы", "Введите новое название для группы «%s»:".printf (group.name));
+        private void prompt_edit_group (AppGroup group) {
+            string title_text = group.is_default ? "Настройка группы «Основные»" : (group.is_hidden ? "Настройка группы «Скрытые»" : "Настройка группы «%s»".printf (group.name));
+            var dialog = new Adw.MessageDialog (this, title_text, "Измените эмодзи и отображаемое название:");
             dialog.add_response ("cancel", "Отмена");
             dialog.add_response ("save", "Сохранить");
             dialog.set_response_appearance ("save", Adw.ResponseAppearance.SUGGESTED);
 
-            var entry = new Entry ();
-            entry.text = group.name;
-            entry.margin_top = 10;
-            entry.margin_bottom = 10;
-            entry.activate.connect (() => {
+            var emoji_entry = new Entry ();
+            var name_entry = new Entry ();
+
+            emoji_entry.activate.connect (() => {
+                name_entry.grab_focus ();
+            });
+            name_entry.activate.connect (() => {
                 dialog.response ("save");
             });
-            dialog.set_extra_child (entry);
+
+            dialog.set_extra_child (build_group_editor_content (emoji_entry, name_entry, group.emoji, group.name));
 
             dialog.response.connect ((resp) => {
                 if (resp == "save") {
-                    string text = entry.get_text ().strip ();
+                    string text = name_entry.get_text ().strip ();
+                    string emoji = emoji_entry.get_text ().strip ();
                     if (text.length > 0) {
-                        group_manager.rename_group (group.id, text);
+                        group_manager.update_group (group.id, text, emoji);
                     }
                 }
             });

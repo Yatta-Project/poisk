@@ -46,6 +46,7 @@ namespace Poisk.Providers {
                 }
 
                 string group_name = group_manager.get_app_group_name (app_id);
+                string badge_label = group_manager.get_app_badge_label (app_id);
 
                 int score = 0;
                 if (query_text.length == 0) {
@@ -60,7 +61,10 @@ namespace Poisk.Providers {
                     int name_score = SearchEngine.fuzzy_score (query_text, name);
                     int exec_score = SearchEngine.fuzzy_score (query_text, exec);
                     int desc_score = desc.length > 0 ? (SearchEngine.fuzzy_score (query_text, desc) / 2) : 0;
-                    int group_score = SearchEngine.fuzzy_score (query_text, group_name);
+                    int group_score = int.max (
+                        SearchEngine.fuzzy_score (query_text, group_name),
+                        SearchEngine.fuzzy_score (query_text, badge_label)
+                    );
                     
                     score = int.max (name_score, int.max (exec_score, desc_score));
                     if (group_score > 0) {
@@ -85,7 +89,7 @@ namespace Poisk.Providers {
                         name,
                         desc.length > 0 ? desc : exec,
                         icon_name,
-                        group_name
+                        badge_label
                     );
                     item.score = score;
                     item.action_label = "Launch Application";
@@ -94,7 +98,7 @@ namespace Poisk.Providers {
                     item.preview_text = "<b>%s</b>\n\n%s\n\nGroup: <tt>%s</tt>\nCommand: <tt>%s</tt>\nDesktop File: <tt>%s</tt>".printf (
                         Markup.escape_text (name),
                         Markup.escape_text (desc.length > 0 ? desc : "No description available"),
-                        Markup.escape_text (group_name),
+                        Markup.escape_text (badge_label),
                         Markup.escape_text (exec),
                         Markup.escape_text (app_id)
                     );
@@ -120,7 +124,7 @@ namespace Poisk.Providers {
                     continue;
                 }
 
-                string group_name = group_manager.get_app_group_name (app_id);
+                string badge_label = group_manager.get_app_badge_label (app_id);
 
                 string icon_name = "application-x-executable";
                 var icon = app.get_icon ();
@@ -133,7 +137,7 @@ namespace Poisk.Providers {
                     name,
                     desc.length > 0 ? desc : exec,
                     icon_name,
-                    group_name
+                    badge_label
                 );
                 item.action_label = "Launch Application";
                 item.provider = this;

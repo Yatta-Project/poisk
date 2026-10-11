@@ -86,8 +86,10 @@ namespace Poisk.UI {
             fb.homogeneous = true;
             fb.column_spacing = 10;
             fb.row_spacing = 10;
-            fb.halign = Align.CENTER;
+            fb.halign = Align.START;
             fb.valign = Align.START;
+            fb.margin_start = 14;
+            fb.margin_end = 14;
 
             fb.child_activated.connect ((child) => {
                 if (child is AppGridItem) {
@@ -121,8 +123,6 @@ namespace Poisk.UI {
             if (!group_in_menu) {
                 // Flat mode without category headers
                 var flow_box = create_flow_box ();
-                flow_box.margin_start = 8;
-                flow_box.margin_end = 8;
 
                 foreach (var item in items) {
                     var card = new AppGridItem (item);
@@ -148,28 +148,38 @@ namespace Poisk.UI {
                     }
 
                     if (group_items.length () > 0) {
-                        // Group Section Header
+                        // Group Section Header with clean separator
                         var header_box = new Box (Orientation.HORIZONTAL, 8);
                         header_box.margin_start = 14;
-                        header_box.margin_top = 10;
-                        header_box.margin_bottom = 4;
+                        header_box.margin_end = 14;
+                        header_box.margin_top = 16;
+                        header_box.margin_bottom = 6;
                         header_box.valign = Align.CENTER;
 
-                        var icon = new Image.from_icon_name (g.icon_name);
-                        icon.pixel_size = 16;
-                        icon.opacity = 0.70;
-                        header_box.append (icon);
+                        // Emoji label
+                        string em = g.emoji.strip ();
+                        if (em.length > 0) {
+                            var emoji_lbl = new Label (em);
+                            emoji_lbl.add_css_class ("poisk-category-emoji");
+                            header_box.append (emoji_lbl);
+                        }
 
+                        // Title label (bold, larger)
                         var title = new Label (g.name);
-                        title.add_css_class ("heading");
-                        title.add_css_class ("caption");
-                        title.opacity = 0.85;
+                        title.add_css_class ("poisk-category-title");
                         header_box.append (title);
 
+                        // Count badge
                         var count_badge = new Label ("%u".printf (group_items.length ()));
-                        count_badge.add_css_class ("dim-label");
-                        count_badge.add_css_class ("caption");
+                        count_badge.add_css_class ("poisk-category-count");
                         header_box.append (count_badge);
+
+                        // Separator line: Рабочие ------------------------------------
+                        var sep = new Separator (Orientation.HORIZONTAL);
+                        sep.hexpand = true;
+                        sep.valign = Align.CENTER;
+                        sep.add_css_class ("poisk-category-separator");
+                        header_box.append (sep);
 
                         content_box.append (header_box);
 

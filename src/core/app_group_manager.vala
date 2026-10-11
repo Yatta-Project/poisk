@@ -6,14 +6,16 @@ namespace Poisk.Core {
     public class AppGroup : GLib.Object {
         public string id { get; set; default = ""; }
         public string name { get; set; default = ""; }
+        public string emoji { get; set; default = "📦"; }
         public string icon_name { get; set; default = "folder-symbolic"; }
         public int position { get; set; default = 0; }
         public bool is_hidden { get; set; default = false; }
         public bool is_default { get; set; default = false; }
 
-        public AppGroup (string id, string name, string icon_name = "folder-symbolic", int position = 0, bool is_hidden = false, bool is_default = false) {
+        public AppGroup (string id, string name, string emoji = "📦", string icon_name = "folder-symbolic", int position = 0, bool is_hidden = false, bool is_default = false) {
             this.id = id;
             this.name = name;
+            this.emoji = emoji;
             this.icon_name = icon_name;
             this.position = position;
             this.is_hidden = is_hidden;
@@ -70,9 +72,9 @@ namespace Poisk.Core {
 
         private void init_default_groups () {
             groups = new List<AppGroup> ();
-            groups.append (new AppGroup ("work", "Рабочие", "applications-office-symbolic", 0, false, false));
-            groups.append (new AppGroup ("default", "Основные", "applications-other-symbolic", 1, false, true));
-            groups.append (new AppGroup ("hidden", "Скрытые", "view-hidden-symbolic", 999, true, false));
+            groups.append (new AppGroup ("work", "Рабочие", "💼", "applications-office-symbolic", 0, false, false));
+            groups.append (new AppGroup ("default", "Основные", "📦", "applications-other-symbolic", 1, false, true));
+            groups.append (new AppGroup ("hidden", "Скрытые", "👁️", "view-hidden-symbolic", 999, true, false));
         }
 
         public string normalize_app_id (string app_id) {
@@ -132,6 +134,23 @@ namespace Poisk.Core {
             return "Основные";
         }
 
+        public string get_app_badge_label (string raw_app_id) {
+            string gid = get_app_group_id (raw_app_id);
+            var g = get_group (gid);
+            if (g != null) {
+                string em = g.emoji.strip ();
+                string nm = g.name.strip ();
+                if (em.length > 0) {
+                    if (nm.has_prefix (em)) {
+                        return nm;
+                    }
+                    return em + " " + nm;
+                }
+                return nm;
+            }
+            return "📦 Основные";
+        }
+
         public bool is_app_hidden (string raw_app_id) {
             return get_app_group_id (raw_app_id) == "hidden";
         }
@@ -147,7 +166,7 @@ namespace Poisk.Core {
             changed ();
         }
 
-        public AppGroup add_group (string name, string icon_name = "folder-symbolic") {
+        public AppGroup add_group (string name, string emoji = "📁", string icon_name = "folder-symbolic") {
             int max_pos = 0;
             foreach (var g in groups) {
                 if (!g.is_hidden && g.position > max_pos) {
@@ -156,7 +175,9 @@ namespace Poisk.Core {
             }
 
             string new_id = "custom_" + get_monotonic_time ().to_string ();
-            var new_group = new AppGroup (new_id, name.strip (), icon_name, max_pos + 1, false, false);
+            string clean_emoji = emoji.strip ();
+            if (clean_emoji.length == 0) clean_emoji = "📁";
+            var new_group = new AppGroup (new_id, name.strip (), clean_emoji, icon_name, max_pos + 1, false, false);
             groups.append (new_group);
 
             save ();
@@ -164,15 +185,26 @@ namespace Poisk.Core {
             return new_group;
         }
 
-        public bool rename_group (string group_id, string new_name) {
+        public bool update_group (string group_id, string new_name, string new_emoji = "") {
             var g = get_group (group_id);
             if (g == null) return false;
-            if (g.is_default || g.is_hidden) return false; // Protected system groups
 
-            g.name = new_name.strip ();
+            string clean_name = new_name.strip ();
+            if (clean_name.length > 0) {
+                g.name = clean_name;
+            }
+            string clean_emoji = new_emoji.strip ();
+            if (clean_emoji.length > 0) {
+                g.emoji = clean_emoji;
+            }
+
             save ();
             changed ();
             return true;
+        }
+
+        public bool rename_group (string group_id, string new_name) {
+            return update_group (group_id, new_name, "");
         }
 
         public bool delete_group (string group_id) {
@@ -316,20 +348,27 @@ namespace Poisk.Core {
                         string gid = g_obj.get_string_member ("id");
                         string name = g_obj.get_string_member ("name");
                         string icon = g_obj.has_member ("icon_name") ? g_obj.get_string_member ("icon_name") : "folder-symbolic";
+                        string emoji = g_obj.has_member ("emoji") ? g_obj.get_string_member ("emoji") : "";
+                        if (emoji.length == 0) {
+                            if (gid == "work") emoji = "💼";
+                            else if (gid == "default") emoji = "📦";
+                            else if (gid == "hidden") emoji = "👁️";
+                            else emoji = "📁";
+                        }
                         int pos = g_obj.has_member ("position") ? (int) g_obj.get_int_member ("position") : (int) i;
                         bool is_hidden = g_obj.has_member ("is_hidden") ? g_obj.get_boolean_member ("is_hidden") : (gid == "hidden");
                         bool is_default = g_obj.has_member ("is_default") ? g_obj.get_boolean_member ("is_default") : (gid == "default");
 
-                        groups.append (new AppGroup (gid, name, icon, pos, is_hidden, is_default));
+                        groups.append (new AppGroup (gid, name, emoji, icon, pos, is_hidden, is_default));
                     }
                 }
 
                 // Ensure default & hidden groups always exist
                 if (get_group ("default") == null) {
-                    groups.append (new AppGroup ("default", "Основные", "applications-other-symbolic", 0, false, true));
+                    groups.append (new AppGroup ("default", "Основные", "📦", "applications-other-symbolic", 0, false, true));
                 }
                 if (get_group ("hidden") == null) {
-                    groups.append (new AppGroup ("hidden", "Скрытые", "view-hidden-symbolic", 999, true, false));
+                    groups.append (new AppGroup ("hidden", "Скрытые", "👁️", "view-hidden-symbolic", 999, true, false));
                 }
 
                 // 2. App mappings
@@ -365,6 +404,8 @@ namespace Poisk.Core {
                     builder.add_string_value (g.id);
                     builder.set_member_name ("name");
                     builder.add_string_value (g.name);
+                    builder.set_member_name ("emoji");
+                    builder.add_string_value (g.emoji);
                     builder.set_member_name ("icon_name");
                     builder.add_string_value (g.icon_name);
                     builder.set_member_name ("position");

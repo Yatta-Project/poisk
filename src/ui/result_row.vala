@@ -135,24 +135,31 @@ namespace Poisk.UI {
             title_lbl = new Label (item.title);
             title_lbl.halign = Align.START;
             title_lbl.ellipsize = Pango.EllipsizeMode.END;
-            title_lbl.add_css_class ("heading");
+            title_lbl.add_css_class ("poisk-row-title");
             text_box.append (title_lbl);
 
             subtitle_lbl = new Label (item.subtitle);
             subtitle_lbl.halign = Align.START;
             subtitle_lbl.ellipsize = Pango.EllipsizeMode.END;
-            subtitle_lbl.add_css_class ("dim-label");
-            subtitle_lbl.add_css_class ("caption");
+            subtitle_lbl.add_css_class ("poisk-row-subtitle");
             text_box.append (subtitle_lbl);
 
             main_box.append (text_box);
 
-            // Badge / Category pill
+            // Badge / Category column (reserved width for max category like "Командировочные" + padding)
+            var badge_box = new Box (Orientation.HORIZONTAL, 0);
+            badge_box.valign = Align.CENTER;
+            badge_box.halign = Align.END;
+            badge_box.margin_start = 16;
+            badge_box.set_size_request (150, -1);
+
             badge_lbl = new Label (item.category);
-            badge_lbl.valign = Align.CENTER;
-            badge_lbl.add_css_class ("dim-label");
-            badge_lbl.add_css_class ("caption");
-            main_box.append (badge_lbl);
+            badge_lbl.halign = Align.END;
+            badge_lbl.ellipsize = Pango.EllipsizeMode.END;
+            badge_lbl.add_css_class ("poisk-row-badge");
+            badge_box.append (badge_lbl);
+
+            main_box.append (badge_box);
 
             this.set_child (main_box);
         }

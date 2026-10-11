@@ -893,6 +893,43 @@ namespace Poisk.UI {
                 .poisk-grid-icon {
                     filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.14));
                 }
+
+                /* Search Results List Typography */
+                .poisk-row-title {
+                    font-size: 14.5px;
+                    font-weight: 600;
+                    color: @theme_fg_color;
+                }
+                .poisk-row-subtitle {
+                    font-size: 12px;
+                    opacity: 0.68;
+                }
+                .poisk-row-badge {
+                    font-size: 13px;
+                    font-weight: 500;
+                    opacity: 0.80;
+                }
+
+                /* Menu Category Headers */
+                .poisk-category-emoji {
+                    font-size: 17px;
+                    margin-right: 2px;
+                }
+                .poisk-category-title {
+                    font-size: 15px;
+                    font-weight: 700;
+                    color: @theme_fg_color;
+                }
+                .poisk-category-count {
+                    font-size: 12px;
+                    font-weight: 600;
+                    opacity: 0.60;
+                    margin-right: 6px;
+                }
+                .poisk-category-separator {
+                    opacity: 0.30;
+                    min-height: 1px;
+                }
             """;
             provider.load_from_string (css);
             Gtk.StyleContext.add_provider_for_display (
