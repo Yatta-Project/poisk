@@ -406,8 +406,8 @@ export default class PoiskPreferences extends ExtensionPreferences {
         page.add(aboutGroup);
 
         const versionRow = new Adw.ActionRow({
-            title: 'Poisk 1.0.0',
-            subtitle: 'Быстрый нативный лаунчер и командная палитра для Pantheon и Linux',
+            title: 'Poisk 1.1.0',
+            subtitle: 'GTK-ориентированный лёгкий аналог Spotlight',
         });
         const icon = new Gtk.Image({
             icon_name: 'system-search',

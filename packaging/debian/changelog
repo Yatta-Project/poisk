@@ -1,3 +1,13 @@
+poisk (1.1.0-1) unstable; urgency=medium
+
+  * App group manager dialog with custom emojis and hidden apps.
+  * Kinetic smooth scrolling and GSK linear gradient dissolution.
+  * Native desktop bridges and window control for GNOME and Cinnamon.
+  * Cinnamon Settings preferences desktop entry and autostart integration.
+  * Clean category headers without numerical counters.
+
+ -- MrLogiousBanana <mrlogiousbanana@gmail.com>  Sun, 11 Oct 2026 15:20:00 +0300
+
 poisk (1.0.0-1) unstable; urgency=medium
 
   * Initial release of Poisk 1.0.0.

@@ -2,7 +2,7 @@
 
 pkgs.stdenv.mkDerivation rec {
   pname = "poisk";
-  version = "1.0.0";
+  version = "1.1.0";
 
   src = pkgs.lib.cleanSourceWith {
     src = ./.;
@@ -36,7 +36,7 @@ pkgs.stdenv.mkDerivation rec {
 
   meta = with pkgs.lib; {
     description = "Fast native launcher and productivity palette for Pantheon and Linux";
-    homepage = "https://github.com/mrlogiousbanana/poisk";
+    homepage = "https://github.com/Yatta-Project/poisk";
     license = licenses.gpl3Plus;
     platforms = platforms.linux;
   };

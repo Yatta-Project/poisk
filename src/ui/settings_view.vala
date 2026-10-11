@@ -345,8 +345,8 @@ namespace Poisk.UI {
             add_group (about_group);
 
             var version_row = new Adw.ActionRow ();
-            version_row.title = "Poisk 1.0.0";
-            version_row.subtitle = "Быстрый нативный лаунчер и командная палитра для Pantheon и Linux";
+            version_row.title = "Poisk 1.1.0";
+            version_row.subtitle = "GTK-ориентированный лёгкий аналог Spotlight";
             var icon = new Image.from_icon_name ("system-search");
             icon.pixel_size = 32;
             version_row.add_prefix (icon);

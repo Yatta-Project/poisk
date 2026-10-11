@@ -134,10 +134,10 @@ namespace Poisk {
                     // Daemon mode: stay resident in background without opening window
                     return 0;
                 } else if (arg == "--help" || arg == "-h") {
-                    command_line.print ("Поиск (Poisk) — быстрый лаунчер для Pantheon и Linux\n\nИспользование:\n  poisk [ОПЦИИ]\n\nОпции:\n  -t, --toggle        Показать / скрыть палитру поиска\n  -p, --preferences   Открыть параметры Поиска\n  -g, --manage-groups Настроить группы и скрытые приложения\n  -b, --background    Запустить в фоновом режиме (демон)\n  -q, --quit          Завершить фоновый процесс лаунчера\n  -v, --version       Показать версию\n  -h, --help          Показать эту справку\n");
+                    command_line.print ("Поиск (Poisk) — GTK-ориентированный лёгкий аналог Spotlight\n\nИспользование:\n  poisk [ОПЦИИ]\n\nОпции:\n  -t, --toggle        Показать / скрыть палитру поиска\n  -p, --preferences   Открыть параметры Поиска\n  -g, --manage-groups Настроить группы и скрытые приложения\n  -b, --background    Запустить в фоновом режиме (демон)\n  -q, --quit          Завершить фоновый процесс лаунчера\n  -v, --version       Показать версию\n  -h, --help          Показать эту справку\n");
                     return 0;
                 } else if (arg == "--version" || arg == "-v") {
-                    command_line.print ("Poisk 1.0.0\nhttps://github.com/mrlogiousbanana/poisk\nОсновано на концепциях Vicinae (https://github.com/vicinaehq/vicinae)\n");
+                    command_line.print ("Poisk 1.1.0\nhttps://github.com/Yatta-Project/poisk\nОсновано на концепциях Vicinae (https://github.com/vicinaehq/vicinae)\n");
                     return 0;
                 }
             }

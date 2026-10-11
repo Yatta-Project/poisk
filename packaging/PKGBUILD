@@ -1,7 +1,7 @@
 # Maintainer: MrLogiousBanana <mrlogiousbanana@gmail.com>
 
 pkgname=poisk
-pkgver=1.0.0
+pkgver=1.1.0
 pkgrel=1
 pkgdesc="Fast native application launcher and command palette for Pantheon and Linux"
 arch=('x86_64' 'aarch64')

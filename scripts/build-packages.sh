@@ -5,7 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 DIST_DIR="${ROOT_DIR}/dist"
 
-VERSION="1.0.0"
+VERSION="1.1.0"
 
 echo "=== Poisk Package Builder ==="
 mkdir -p "${DIST_DIR}"

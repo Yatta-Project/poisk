@@ -1,5 +1,5 @@
 Name:           poisk
-Version:        1.0.0
+Version:        1.1.0
 Release:        1%{?dist}
 Summary:        Fast native application launcher and command palette for Pantheon and Linux
 
@@ -67,12 +67,18 @@ Features:
 %license LICENSE
 %doc README.md
 %{_bindir}/poisk
-%{_datadir}/applications/io.github.mrlogiousbanana.poisk.desktop
+%{_datadir}/applications/io.github.mrlogiousbanana.poisk*.desktop
 %{_datadir}/glib-2.0/schemas/io.github.mrlogiousbanana.poisk.gschema.xml
 %{_userunitdir}/poisk.service
 %dir %{_datadir}/gnome-shell/extensions/poisk-blur@mrlogiousbanana.github.io
 %{_datadir}/gnome-shell/extensions/poisk-blur@mrlogiousbanana.github.io/*
 
 %changelog
+* Sun Oct 11 2026 MrLogiousBanana <mrlogiousbanana@gmail.com> - 1.1.0-1
+- App group manager with custom emojis and hidden apps
+- Kinetic smooth scrolling and GSK linear gradient dissolution
+- Native window control bridges for GNOME and Cinnamon
+- Cinnamon Settings preferences desktop entry and autostart integration
+
 * Sun Oct 11 2026 MrLogiousBanana <mrlogiousbanana@gmail.com> - 1.0.0-1
 - Initial release of Poisk 1.0.0 for Fedora/RHEL

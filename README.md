@@ -1,13 +1,13 @@
 # Поиск (Poisk)
 
 <p align="center">
-  <b>Быстрый нативный лаунчер и командная палитра для Linux с первоклассной поддержкой elementary OS (Pantheon) и GNOME Shell</b>
+  <b>GTK-ориентированный лёгкий аналог Spotlight для Linux (Pantheon, GNOME, Cinnamon)</b>
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.0.0-blue.svg" alt="Version 1.0.0" />
+  <img src="https://img.shields.io/badge/version-1.1.0-blue.svg" alt="Version 1.1.0" />
   <img src="https://img.shields.io/badge/license-GPL--3.0--or--later-green.svg" alt="License" />
-  <img src="https://img.shields.io/badge/platform-Wayland-orange.svg" alt="Platform Wayland" />
+  <img src="https://img.shields.io/badge/platform-Wayland%20%7C%20X11-orange.svg" alt="Platform Wayland / X11" />
   <img src="https://img.shields.io/badge/GTK-4.12+-purple.svg" alt="GTK4" />
   <img src="https://img.shields.io/badge/elementary%20OS-7%20%7C%208-teal.svg" alt="Pantheon" />
 </p>
@@ -16,7 +16,7 @@
 
 ## ⚡ О проекте
 
-**Поиск (Poisk)** — легковесный, моментальный системный лаунчер, созданный на **Vala**, **GTK4**, **Libadwaita** и **Granite 7**. Разработан специально для комфортной работы в современных Wayland-окружениях: нативно интегрируется в **elementary OS (Pantheon)** и **GNOME Shell**, предлагая эстетику системного дока, аппаратное размытие (frosted glass) и скорость отклика менее 5 миллисекунд.
+**Поиск (Poisk)** — легковесный, моментальный GTK-ориентированный системный лаунчер (аналог macOS Spotlight), созданный на **Vala**, **GTK4**, **Libadwaita** и **Granite 7**. Разработан специально для комфортной работы в современных окружениях Linux: нативно интегрируется в **elementary OS (Pantheon)**, **GNOME Shell** и **Cinnamon**, предлагая эстетику системного дока, аппаратное размытие (frosted glass), плавную кинетическую прокрутку и скорость отклика менее 5 миллисекунд.
 
 ---
 
@@ -57,12 +57,12 @@
 
 ### Fedora / RHEL / openSUSE (RPM)
 ```bash
-sudo dnf install ./poisk-1.0.0-1.x86_64.rpm
+sudo dnf install ./poisk-1.1.0-1.x86_64.rpm
 ```
 
 ### Ubuntu / Debian / elementary OS (DEB)
 ```bash
-sudo dpkg -i ./poisk_1.0.0_amd64.deb
+sudo dpkg -i ./poisk_1.1.0_amd64.deb
 sudo apt-get install -f
 ```
 
