@@ -312,23 +312,14 @@ namespace Poisk.UI {
                 return true;
             }
 
-            // 3. GTK Settings (theme name check)
-            var gtk_settings = Gtk.Settings.get_default ();
-            if (gtk_settings != null) {
-                string t_name = gtk_settings.gtk_theme_name.down ();
-                if ("dark" in t_name || "slate" in t_name || "black" in t_name) {
-                    return true;
-                }
-            }
-
-            // 4. org.gnome.desktop.interface GSettings
+            // 3. org.gnome.desktop.interface GSettings
             if (iface_settings != null) {
                 string scheme = iface_settings.get_string ("color-scheme");
                 if (scheme == "prefer-dark") {
                     return true;
                 }
                 string g_theme = iface_settings.get_string ("gtk-theme").down ();
-                if ("dark" in g_theme || "slate" in g_theme || "black" in g_theme) {
+                if (g_theme.contains ("-dark") || g_theme.has_suffix ("dark") || g_theme.contains ("dark-")) {
                     return true;
                 }
             } else {
@@ -341,11 +332,20 @@ namespace Poisk.UI {
                             return true;
                         }
                         string g_theme = tmp_settings.get_string ("gtk-theme").down ();
-                        if ("dark" in g_theme || "slate" in g_theme || "black" in g_theme) {
+                        if (g_theme.contains ("-dark") || g_theme.has_suffix ("dark") || g_theme.contains ("dark-")) {
                             return true;
                         }
                     } catch (Error e) {
                     }
+                }
+            }
+
+            // 4. GTK Settings (Cinnamon, XFCE theme name check)
+            var gtk_settings = Gtk.Settings.get_default ();
+            if (gtk_settings != null) {
+                string t_name = gtk_settings.gtk_theme_name.down ();
+                if (t_name.contains ("-dark") || t_name.has_suffix ("dark") || t_name.contains ("dark-") || t_name == "highcontrastinverse") {
+                    return true;
                 }
             }
 
