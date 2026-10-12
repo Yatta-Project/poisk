@@ -39,6 +39,7 @@ namespace Poisk.UI {
         private Cancellable? current_search_cancellable = null;
         private GLib.Settings? transparency_settings = null;
         private GLib.Settings? poisk_settings = null;
+        private GLib.Settings? iface_settings = null;
         private MultiBlurManager blur_manager;
         private Gtk.CssProvider dynamic_css_provider = new Gtk.CssProvider ();
         private int target_window_height = 624;
@@ -100,6 +101,7 @@ namespace Poisk.UI {
 
             this.notify["visible"].connect (() => {
                 if (this.visible) {
+                    update_dynamic_css ();
                     pill_header.set_text ("");
                     switch_mode (WindowMode.CAPSULE);
                     blur_manager.request_focus ();
@@ -227,6 +229,7 @@ namespace Poisk.UI {
                 }
             }
 
+            setup_theme_listener ();
             apply_layout_style ();
             update_dynamic_css ();
             update_transparency_mode ();
@@ -298,6 +301,100 @@ namespace Poisk.UI {
             switch_mode (current_mode);
         }
 
+        private bool is_dark_theme () {
+            // 1. Libadwaita StyleManager (handles Desktop Portal in GNOME, elementary, Cinnamon)
+            if (Adw.StyleManager.get_default ().dark) {
+                return true;
+            }
+
+            // 2. Granite Settings (elementary OS native)
+            if (Granite.Settings.get_default ().prefers_color_scheme == Granite.Settings.ColorScheme.DARK) {
+                return true;
+            }
+
+            // 3. GTK Settings (theme name check)
+            var gtk_settings = Gtk.Settings.get_default ();
+            if (gtk_settings != null) {
+                string t_name = gtk_settings.gtk_theme_name.down ();
+                if ("dark" in t_name || "slate" in t_name || "black" in t_name) {
+                    return true;
+                }
+            }
+
+            // 4. org.gnome.desktop.interface GSettings
+            if (iface_settings != null) {
+                string scheme = iface_settings.get_string ("color-scheme");
+                if (scheme == "prefer-dark") {
+                    return true;
+                }
+                string g_theme = iface_settings.get_string ("gtk-theme").down ();
+                if ("dark" in g_theme || "slate" in g_theme || "black" in g_theme) {
+                    return true;
+                }
+            } else {
+                var schema_source = SettingsSchemaSource.get_default ();
+                if (schema_source != null && schema_source.lookup ("org.gnome.desktop.interface", true) != null) {
+                    try {
+                        var tmp_settings = new GLib.Settings ("org.gnome.desktop.interface");
+                        string scheme = tmp_settings.get_string ("color-scheme");
+                        if (scheme == "prefer-dark") {
+                            return true;
+                        }
+                        string g_theme = tmp_settings.get_string ("gtk-theme").down ();
+                        if ("dark" in g_theme || "slate" in g_theme || "black" in g_theme) {
+                            return true;
+                        }
+                    } catch (Error e) {
+                    }
+                }
+            }
+
+            // 5. Fallback: check actual foreground color luminance of the window
+            // If text is bright (luminance > 0.5), it means current GTK stylesheet is a dark theme
+            var fg = this.get_color ();
+            double lum = 0.2126 * fg.red + 0.7152 * fg.green + 0.0722 * fg.blue;
+            if (lum > 0.50) {
+                return true;
+            }
+
+            return false;
+        }
+
+        private void setup_theme_listener () {
+            // 1. Libadwaita StyleManager
+            Adw.StyleManager.get_default ().notify["dark"].connect (() => {
+                update_dynamic_css ();
+            });
+
+            // 2. Granite Settings
+            Granite.Settings.get_default ().notify["prefers-color-scheme"].connect (() => {
+                update_dynamic_css ();
+            });
+
+            // 3. GTK Settings
+            var gtk_settings = Gtk.Settings.get_default ();
+            if (gtk_settings != null) {
+                gtk_settings.notify["gtk-theme-name"].connect (() => {
+                    update_dynamic_css ();
+                });
+            }
+
+            // 4. org.gnome.desktop.interface
+            var schema_source = SettingsSchemaSource.get_default ();
+            if (schema_source != null && schema_source.lookup ("org.gnome.desktop.interface", true) != null) {
+                try {
+                    iface_settings = new GLib.Settings ("org.gnome.desktop.interface");
+                    iface_settings.changed["color-scheme"].connect (() => {
+                        update_dynamic_css ();
+                    });
+                    iface_settings.changed["gtk-theme"].connect (() => {
+                        update_dynamic_css ();
+                    });
+                } catch (Error e) {
+                }
+            }
+        }
+
         private void update_dynamic_css () {
             double opacity = 0.84;
             if (poisk_settings != null) {
@@ -308,22 +405,76 @@ namespace Poisk.UI {
 
             string op_str = "%.3f".printf (opacity).replace (",", ".");
 
-            string dynamic_css = """
-                .poisk-capsule,
-                .satellite-bubble,
-                .system-bubble-btn {
-                    background-image: linear-gradient(to bottom, rgba(255, 255, 255, %s), rgba(235, 235, 235, %s));
-                }
-                @media (prefers-color-scheme: dark) {
+            bool dark = is_dark_theme ();
+
+            string dynamic_css;
+            if (dark) {
+                // Dark Theme palette: deep dark glass matching plank-dark & adwaita dark
+                dynamic_css = """
                     .poisk-capsule,
                     .satellite-bubble,
                     .system-bubble-btn {
-                        background-image: linear-gradient(to bottom, rgba(44, 44, 44, %s), rgba(55, 55, 55, %s));
+                        background-color: transparent;
+                        background-image: linear-gradient(to bottom, rgba(40, 40, 40, %s), rgba(24, 24, 24, %s));
+                        border: 1px solid rgba(0, 0, 0, 0.55);
+                        box-shadow:
+                            inset 0 1px 0 0 rgba(255, 255, 255, 0.14),
+                            inset 0 -1px 0 0 rgba(0, 0, 0, 0.45),
+                            0 12px 36px rgba(0, 0, 0, 0.55),
+                            0 4px 10px rgba(0, 0, 0, 0.28);
                     }
-                }
-            """.printf (op_str, op_str, op_str, op_str);
+                    .poisk-capsule.expanded-card {
+                        box-shadow:
+                            inset 0 1px 0 0 rgba(255, 255, 255, 0.14),
+                            inset 0 -1px 0 0 rgba(0, 0, 0, 0.45),
+                            0 16px 48px rgba(0, 0, 0, 0.65),
+                            0 5px 14px rgba(0, 0, 0, 0.35);
+                    }
+                    .reduce-transparency .poisk-capsule,
+                    .poisk-capsule.reduce-transparency,
+                    .reduce-transparency .system-bubble-btn,
+                    .system-bubble-btn.reduce-transparency {
+                        background-image: none;
+                        background-color: #242424;
+                    }
+                """.printf (op_str, op_str);
+            } else {
+                // Light Theme palette: clean dock glass
+                dynamic_css = """
+                    .poisk-capsule,
+                    .satellite-bubble,
+                    .system-bubble-btn {
+                        background-color: transparent;
+                        background-image: linear-gradient(to bottom, rgba(255, 255, 255, %s), rgba(235, 235, 235, %s));
+                        border: 1px solid rgba(0, 0, 0, 0.18);
+                        box-shadow:
+                            inset 0 1px 0 0 rgba(255, 255, 255, 0.96),
+                            inset 0 -1px 0 0 rgba(0, 0, 0, 0.04),
+                            0 10px 32px rgba(0, 0, 0, 0.18),
+                            0 2px 8px rgba(0, 0, 0, 0.08);
+                    }
+                    .poisk-capsule.expanded-card {
+                        box-shadow:
+                            inset 0 1px 0 0 rgba(255, 255, 255, 0.96),
+                            inset 0 -1px 0 0 rgba(0, 0, 0, 0.05),
+                            0 16px 44px rgba(0, 0, 0, 0.24),
+                            0 4px 12px rgba(0, 0, 0, 0.12);
+                    }
+                    .reduce-transparency .poisk-capsule,
+                    .poisk-capsule.reduce-transparency,
+                    .reduce-transparency .system-bubble-btn,
+                    .system-bubble-btn.reduce-transparency {
+                        background-image: none;
+                        background-color: #f6f6f6;
+                    }
+                """.printf (op_str, op_str);
+            }
 
             dynamic_css_provider.load_from_string (dynamic_css);
+            capsule_box.queue_draw ();
+            if (system_bubble != null) {
+                system_bubble.queue_draw ();
+            }
         }
 
         private void update_transparency_mode () {
@@ -762,28 +913,6 @@ namespace Poisk.UI {
                         0 4px 12px rgba(0, 0, 0, 0.12);
                 }
 
-                /* Dark Theme adaptation matching plank-dark/dock.theme */
-                @media (prefers-color-scheme: dark) {
-                    .poisk-capsule,
-                    .satellite-bubble,
-                    .system-bubble-btn {
-                        background-color: transparent;
-                        border: 1px solid rgba(0, 0, 0, 0.37);
-                        box-shadow:
-                            inset 0 1px 0 0 rgba(180, 180, 180, 0.50),
-                            inset 0 -1px 0 0 rgba(0, 0, 0, 0.40),
-                            0 12px 36px rgba(0, 0, 0, 0.45),
-                            0 4px 10px rgba(0, 0, 0, 0.25);
-                    }
-
-                    .poisk-capsule.expanded-card {
-                        box-shadow:
-                            inset 0 1px 0 0 rgba(180, 180, 180, 0.50),
-                            inset 0 -1px 0 0 rgba(0, 0, 0, 0.40),
-                            0 16px 48px rgba(0, 0, 0, 0.55),
-                            0 5px 14px rgba(0, 0, 0, 0.30);
-                    }
-                }
 
                 /* Header */
                 .poisk-pill-header {
