@@ -323,7 +323,7 @@ namespace Poisk.UI {
 
             var manage_groups_row = new Adw.ActionRow ();
             manage_groups_row.title = "Настроить группы и скрытые приложения";
-            manage_groups_row.subtitle = "Изменение порядка, Drag & Drop и скрытие программ";
+            manage_groups_row.subtitle = "Изменение порядка, Drag &amp; Drop и скрытие программ";
             var manage_btn = new Button.with_label ("Настроить...");
             manage_btn.valign = Align.CENTER;
             manage_btn.add_css_class ("suggested-action");
