@@ -147,6 +147,18 @@ namespace Poisk {
         }
 
         public static int main (string[] args) {
+            // Ensure display environment variables are present even if started before session environment was imported
+            if (GLib.Environment.get_variable ("WAYLAND_DISPLAY") == null) {
+                string runtime_dir = GLib.Environment.get_user_runtime_dir ();
+                if (GLib.FileUtils.test (GLib.Path.build_filename (runtime_dir, "wayland-0"), GLib.FileTest.EXISTS)) {
+                    GLib.Environment.set_variable ("WAYLAND_DISPLAY", "wayland-0", false);
+                }
+            }
+            if (GLib.Environment.get_variable ("DISPLAY") == null) {
+                if (GLib.FileUtils.test ("/tmp/.X11-unix/X0", GLib.FileTest.EXISTS)) {
+                    GLib.Environment.set_variable ("DISPLAY", ":0", false);
+                }
+            }
             // Prioritize Wayland on Wayland compositors (Pantheon, GNOME Wayland),
             // but seamlessly fallback to X11 on X11 environments (Cinnamon, GNOME on Xorg, etc.)
             if (GLib.Environment.get_variable ("GDK_BACKEND") == null) {

@@ -6,6 +6,7 @@ StartLimitIntervalSec=0
 
 [Service]
 Type=simple
+KillMode=process
 ExecStart=/usr/bin/poisk --background
 Restart=always
 RestartSec=2

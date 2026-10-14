@@ -178,6 +178,23 @@ namespace Poisk.Providers {
                 try {
                     var display = Gdk.Display.get_default ();
                     var context = display != null ? display.get_app_launch_context () : null;
+                    if (context != null) {
+                        string? wayland = GLib.Environment.get_variable ("WAYLAND_DISPLAY");
+                        if (wayland != null) {
+                            context.setenv ("WAYLAND_DISPLAY", wayland);
+                        } else {
+                            string runtime_dir = GLib.Environment.get_user_runtime_dir ();
+                            if (GLib.FileUtils.test (GLib.Path.build_filename (runtime_dir, "wayland-0"), GLib.FileTest.EXISTS)) {
+                                context.setenv ("WAYLAND_DISPLAY", "wayland-0");
+                            }
+                        }
+                        string? x11 = GLib.Environment.get_variable ("DISPLAY");
+                        if (x11 != null) {
+                            context.setenv ("DISPLAY", x11);
+                        } else if (GLib.FileUtils.test ("/tmp/.X11-unix/X0", GLib.FileTest.EXISTS)) {
+                            context.setenv ("DISPLAY", ":0");
+                        }
+                    }
                     launched = app.launch (null, context);
                     Database.get_default ().record_app_launch (app.get_id () ?? item.id);
                 } catch (Error e) {
