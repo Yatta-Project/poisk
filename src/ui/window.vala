@@ -660,6 +660,29 @@ namespace Poisk.UI {
             pill_header = new PillHeader ();
             pill_header.search_changed.connect (on_search_changed);
             pill_header.activate.connect (on_header_activate);
+            pill_header.get_glance_pill ().activated.connect (() => {
+                this.set_visible (false);
+            });
+
+            // Set test glance pill (Raycast-style header action pill)
+            pill_header.set_glance (
+                "software-update-available-symbolic",
+                null,
+                "5 обновлений",
+                () => {
+                    try {
+                        string[] argv = { "io.elementary.appcenter", "--show-updates" };
+                        Process.spawn_async (null, argv, null, SpawnFlags.SEARCH_PATH, null, null);
+                    } catch (Error e) {
+                        try {
+                            string[] fallback = { "io.elementary.appcenter" };
+                            Process.spawn_async (null, fallback, null, SpawnFlags.SEARCH_PATH, null, null);
+                        } catch (Error e2) {
+                            warning ("Failed to open updates: %s", e2.message);
+                        }
+                    }
+                }
+            );
 
             // Results Body
             results_card = new Box (Orientation.VERTICAL, 4);
@@ -929,6 +952,58 @@ namespace Poisk.UI {
                     border-bottom-right-radius: 0;
                 }
 
+                /* Header Glance Action Pill (Raycast style) */
+                button.poisk-glance-pill {
+                    background-image: none;
+                    background-color: alpha(currentColor, 0.08);
+                    color: @theme_fg_color;
+                    border: 1px solid alpha(currentColor, 0.12);
+                    border-radius: 9999px;
+                    padding: 4px 10px;
+                    margin: 0;
+                    min-height: 28px;
+                    transition: all 140ms ease;
+                    box-shadow: none;
+                    outline: none;
+                }
+
+                button.poisk-glance-pill:hover {
+                    background-color: alpha(currentColor, 0.14);
+                    border-color: alpha(currentColor, 0.24);
+                }
+
+                button.poisk-glance-pill:active {
+                    background-color: alpha(currentColor, 0.22);
+                }
+
+                .glance-icon-emoji {
+                    font-size: 13px;
+                    margin-right: 2px;
+                }
+
+                .glance-icon-image {
+                    opacity: 0.90;
+                    margin-right: 2px;
+                }
+
+                .glance-title {
+                    font-size: 12.5px;
+                    font-weight: 500;
+                    opacity: 0.90;
+                    margin-right: 4px;
+                }
+
+                .glance-key-badge {
+                    background: alpha(currentColor, 0.12);
+                    color: currentColor;
+                    font-size: 11px;
+                    font-weight: 600;
+                    border-radius: 4px;
+                    padding: 1px 5px;
+                    opacity: 0.75;
+                    margin-left: 2px;
+                }
+
                 /* Clean Entry without blue focus border */
                 entry.pill-entry,
                 entry.pill-entry:focus,
@@ -943,7 +1018,7 @@ namespace Poisk.UI {
                     outline: none;
                     font-size: 16px;
                     font-weight: 400;
-                    padding-right: 16px;
+                    padding-right: 8px;
                 }
 
                 .monolithic-capsule .poisk-pill-header {

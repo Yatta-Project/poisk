@@ -60,6 +60,7 @@ sources = files(
   'src/ui/frosted_box.vala',
   'src/ui/fading_box.vala',
   'src/ui/pill_header.vala',
+  'src/ui/glance_pill.vala',
   'src/ui/result_row.vala',
   'src/ui/preview_pane.vala',
   'src/ui/app_grid.vala',

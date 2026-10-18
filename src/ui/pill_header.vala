@@ -4,6 +4,8 @@ namespace Poisk.UI {
 
     public class PillHeader : Box {
         private Entry entry;
+        private Revealer glance_revealer;
+        private GlancePill glance_pill;
 
         public signal void search_changed (string query);
         public new signal void activate ();
@@ -25,15 +27,48 @@ namespace Poisk.UI {
             entry.placeholder_text = "Поиск приложений и окон...";
             entry.add_css_class ("pill-entry");
 
+            glance_pill = new GlancePill ();
+            glance_revealer = new Revealer ();
+            glance_revealer.transition_type = RevealerTransitionType.CROSSFADE;
+            glance_revealer.transition_duration = 160;
+            glance_revealer.set_child (glance_pill);
+            glance_revealer.valign = Align.CENTER;
+            glance_revealer.reveal_child = false;
+
             entry.changed.connect (() => {
-                search_changed (entry.get_text ());
+                string text = entry.get_text ();
+                glance_revealer.reveal_child = (text.length == 0 && glance_pill.has_action);
+                search_changed (text);
             });
 
             entry.activate.connect (() => {
+                if (entry.get_text ().strip ().length == 0 && glance_pill.has_action) {
+                    glance_pill.execute_action ();
+                    return;
+                }
                 activate ();
             });
 
             this.append (entry);
+            this.append (glance_revealer);
+        }
+
+        public void set_glance (string? icon_name, string? emoji, string text, owned GlancePill.ActionCallback? cb = null) {
+            glance_pill.set_glance (icon_name, emoji, text, (owned) cb);
+            glance_revealer.reveal_child = (entry.get_text ().length == 0 && glance_pill.has_action);
+        }
+
+        public void clear_glance () {
+            glance_pill.set_glance (null, null, "");
+            glance_revealer.reveal_child = false;
+        }
+
+        public GlancePill get_glance_pill () {
+            return glance_pill;
+        }
+
+        public bool has_glance_action () {
+            return glance_pill.has_action;
         }
 
         public string get_text () {
@@ -42,6 +77,7 @@ namespace Poisk.UI {
 
         public void set_text (string text) {
             entry.set_text (text);
+            glance_revealer.reveal_child = (text.length == 0 && glance_pill.has_action);
         }
 
         public void grab_entry_focus () {
