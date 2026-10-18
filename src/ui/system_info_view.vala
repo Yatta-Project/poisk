@@ -36,7 +36,7 @@ namespace Poisk.UI {
             var content_wrapper = new Box (Orientation.VERTICAL, 0);
             content_wrapper.vexpand = true;
             content_wrapper.hexpand = true;
-            content_wrapper.valign = Align.CENTER;
+            content_wrapper.valign = Align.START;
 
             // Loading / Status Box
             status_box = new Box (Orientation.HORIZONTAL, 10);
@@ -62,12 +62,12 @@ namespace Poisk.UI {
             output_label.selectable = true;
             output_label.xalign = 0.0f;
             output_label.yalign = 0.0f;
-            output_label.halign = Align.CENTER;
-            output_label.valign = Align.CENTER;
-            output_label.margin_start = 24;
+            output_label.halign = Align.START;
+            output_label.valign = Align.START;
+            output_label.margin_start = 28;
             output_label.margin_end = 24;
-            output_label.margin_top = 16;
-            output_label.margin_bottom = 16;
+            output_label.margin_top = 18;
+            output_label.margin_bottom = 18;
             output_label.add_css_class ("system-fetch-text");
             output_label.add_css_class ("monospace");
             output_label.visible = false;

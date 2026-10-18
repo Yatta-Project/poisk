@@ -1271,9 +1271,9 @@ namespace Poisk.UI {
 
                 .system-fetch-text,
                 label.system-fetch-text {
-                    font-family: monospace;
-                    font-size: 11.5px;
-                    line-height: 1.25;
+                    font-family: "SFMono Nerd Font", monospace;
+                    font-size: 11px;
+                    line-height: 1.0;
                     letter-spacing: 0px;
                     font-feature-settings: "liga" 0;
                 }

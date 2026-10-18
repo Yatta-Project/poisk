@@ -109,15 +109,28 @@ namespace Poisk.Core {
                         continue;
                     }
 
-                    // Regular text: escape XML entities
-                    sb.append (GLib.Markup.escape_text (part));
+                    // Regular text: escape XML entities and compensate narrow fallback glyphs
+                    int pi = 0;
+                    int plen = part.length;
+                    while (pi < plen) {
+                        unichar uc = part.get_char (pi);
+                        int bytes = uc.to_utf8 (null);
+                        string ch_str = part.substring (pi, bytes);
+                        pi += bytes;
+
+                        if (uc == 0xf0150 || uc == 0xf03d6 || (uc >= 0x1fb00 && uc <= 0x1fbff)) {
+                            sb.append_printf ("<span letter_spacing=\"2048\">%s</span>", GLib.Markup.escape_text (ch_str));
+                        } else {
+                            sb.append (GLib.Markup.escape_text (ch_str));
+                        }
+                    }
                 }
 
                 if (in_span) sb.append ("</span>");
                 if (in_bold) sb.append ("</b>");
                 if (in_italic) sb.append ("</i>");
 
-                string candidate = "<span font_family=\"monospace\">" + sb.str + "</span>";
+                string candidate = "<span font_family=\"SFMono Nerd Font, monospace\">" + sb.str + "</span>";
 
                 // Validate with Pango parser to ensure it never crashes
                 try {
@@ -127,10 +140,10 @@ namespace Poisk.Core {
                     return candidate;
                 } catch (Error err) {
                     // Fallback to safely escaped plain text
-                    return "<span font_family=\"monospace\">" + GLib.Markup.escape_text (strip_ansi (raw)) + "</span>";
+                    return "<span font_family=\"SFMono Nerd Font, monospace\">" + GLib.Markup.escape_text (strip_ansi (raw)) + "</span>";
                 }
             } catch (Error e) {
-                return "<span font_family=\"monospace\">" + GLib.Markup.escape_text (strip_ansi (raw)) + "</span>";
+                return "<span font_family=\"SFMono Nerd Font, monospace\">" + GLib.Markup.escape_text (strip_ansi (raw)) + "</span>";
             }
         }
 
