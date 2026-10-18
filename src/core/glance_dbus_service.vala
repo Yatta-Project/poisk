@@ -92,6 +92,13 @@ namespace Poisk.Core {
             manager.mark_connected (id);
         }
 
+        public void ActivateGlance (string id) throws GLib.Error {
+            var active = manager.get_active_glance ();
+            if (active != null && (id == "" || active.id == id)) {
+                manager.execute_item (active);
+            }
+        }
+
         public string GetActiveId () throws GLib.Error {
             var active = manager.get_active_glance ();
             return active != null ? active.id : "";

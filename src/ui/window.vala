@@ -780,6 +780,11 @@ namespace Poisk.UI {
                 activate_selected ();
             } else if (current_mode == WindowMode.MENU) {
                 app_grid.activate_selected ();
+            } else if (current_mode == WindowMode.CAPSULE) {
+                var glance = pill_header.get_glance_pill ();
+                if (glance.visible && glance.has_action) {
+                    glance.execute_action ();
+                }
             }
         }
 
@@ -833,6 +838,16 @@ namespace Poisk.UI {
                     if (keyval == Gdk.Key.Return || keyval == Gdk.Key.KP_Enter) {
                         app_grid.activate_selected ();
                         return true;
+                    }
+                }
+
+                if (current_mode == WindowMode.CAPSULE) {
+                    if (keyval == Gdk.Key.Return || keyval == Gdk.Key.KP_Enter) {
+                        var glance = pill_header.get_glance_pill ();
+                        if (glance.visible && glance.has_action) {
+                            glance.execute_action ();
+                            return true;
+                        }
                     }
                 }
 

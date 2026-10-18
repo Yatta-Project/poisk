@@ -15,6 +15,7 @@ namespace Poisk {
         private GlanceManager glance_manager;
         private GlanceDBusService glance_dbus_service;
         private UpdatesGlanceProvider updates_glance_provider;
+        private CalendarGlanceProvider calendar_glance_provider;
 
         public Application () {
             Object (
@@ -95,7 +96,9 @@ namespace Poisk {
             // Init centralized glance manager, providers and D-Bus interface
             glance_manager = GlanceManager.get_default ();
             updates_glance_provider = new UpdatesGlanceProvider ();
+            calendar_glance_provider = new CalendarGlanceProvider ();
             glance_manager.register_provider (updates_glance_provider);
+            glance_manager.register_provider (calendar_glance_provider);
 
             try {
                 var connection = Bus.get_sync (BusType.SESSION);
@@ -175,6 +178,27 @@ namespace Poisk {
                 string item_id = (start_idx + 1 < args.length) ? args[start_idx + 1] : "custom";
                 glance_manager.clear_glance (item_id);
                 cmd_line.print ("Виджет '%s' удалён\n".printf (item_id));
+                return 0;
+            } else if (subcmd == "activate") {
+                string item_id = (start_idx + 1 < args.length) ? args[start_idx + 1] : "";
+                var active = glance_manager.get_active_glance ();
+                if (active != null && (item_id == "" || active.id == item_id)) {
+                    cmd_line.print ("Активация виджета: %s\n".printf (active.id));
+                    glance_manager.execute_item (active);
+                } else {
+                    cmd_line.printerr ("Нет подходящего виджета для активации\n");
+                }
+                return 0;
+            } else if (subcmd == "dismiss") {
+                string item_id = (start_idx + 1 < args.length) ? args[start_idx + 1] : "";
+                if (item_id.length == 0) {
+                    var active = glance_manager.get_active_glance ();
+                    if (active != null) item_id = active.id;
+                }
+                if (item_id.length > 0) {
+                    glance_manager.mark_connected (item_id);
+                    cmd_line.print ("Виджет '%s' отклонён / отмечен подключенным\n".printf (item_id));
+                }
                 return 0;
             } else if (subcmd == "get") {
                 var active = glance_manager.get_active_glance ();
