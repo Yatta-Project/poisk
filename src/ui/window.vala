@@ -957,8 +957,8 @@ namespace Poisk.UI {
                     background-color: alpha(currentColor, 0.08);
                     color: @theme_fg_color;
                     border: 1px solid alpha(currentColor, 0.12);
-                    border-radius: 9999px;
-                    padding: 4px 10px;
+                    border-radius: 8px;
+                    padding: 4px 9px;
                     margin: 0;
                     min-height: 28px;
                     transition: all 140ms ease;
