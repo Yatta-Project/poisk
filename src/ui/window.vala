@@ -587,6 +587,10 @@ namespace Poisk.UI {
                 update_blur ();
                 return GLib.Source.REMOVE;
             });
+            GLib.Timeout.add (120, () => {
+                update_blur ();
+                return GLib.Source.REMOVE;
+            });
         }
 
         private void update_blur () {
@@ -614,8 +618,16 @@ namespace Poisk.UI {
 
             double cap_x = 0, cap_y = 0;
             capsule_box.translate_coordinates (window_container, 0, 0, out cap_x, out cap_y);
+            int cap_width = (current_layout == WindowLayoutStyle.MONOLITHIC) ? 740 : 680;
             int cap_w = capsule_box.get_width ();
             int cap_h = capsule_box.get_height ();
+            if (current_mode == WindowMode.CAPSULE) {
+                if (cap_h > 80 || cap_h <= 0) cap_h = 58;
+                if (cap_w <= 0) cap_w = cap_width;
+            } else {
+                if (cap_h < 200) cap_h = 444;
+                if (cap_w <= 0) cap_w = cap_width;
+            }
             int win_w = this.get_width ();
             int win_h = this.get_height ();
 
@@ -1257,10 +1269,12 @@ namespace Poisk.UI {
                     min-height: 1px;
                 }
 
-                .system-fetch-text {
-                    font-family: "JetBrains Mono", "Fira Code", "Cascadia Code", "Ubuntu Mono", monospace;
+                .system-fetch-text,
+                label.system-fetch-text {
+                    font-family: monospace;
                     font-size: 11.5px;
-                    line-height: 1.35;
+                    line-height: 1.25;
+                    letter-spacing: 0px;
                     font-feature-settings: "liga" 0;
                 }
             """;

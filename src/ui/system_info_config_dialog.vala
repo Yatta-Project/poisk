@@ -182,6 +182,7 @@ namespace Poisk.UI {
             preview_label.margin_top = 8;
             preview_label.margin_bottom = 12;
             preview_label.add_css_class ("system-fetch-text");
+            preview_label.add_css_class ("monospace");
 
             preview_scroll.set_child (preview_label);
             preview_card.append (preview_scroll);

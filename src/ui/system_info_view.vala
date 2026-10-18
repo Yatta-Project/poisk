@@ -31,11 +31,12 @@ namespace Poisk.UI {
             scrolled_window = new ScrolledWindow ();
             scrolled_window.vexpand = true;
             scrolled_window.hexpand = true;
-            scrolled_window.set_policy (PolicyType.AUTOMATIC, PolicyType.AUTOMATIC);
+            scrolled_window.set_policy (PolicyType.NEVER, PolicyType.AUTOMATIC);
 
             var content_wrapper = new Box (Orientation.VERTICAL, 0);
             content_wrapper.vexpand = true;
             content_wrapper.hexpand = true;
+            content_wrapper.valign = Align.CENTER;
 
             // Loading / Status Box
             status_box = new Box (Orientation.HORIZONTAL, 10);
@@ -61,13 +62,14 @@ namespace Poisk.UI {
             output_label.selectable = true;
             output_label.xalign = 0.0f;
             output_label.yalign = 0.0f;
-            output_label.halign = Align.START;
-            output_label.valign = Align.START;
-            output_label.margin_start = 18;
-            output_label.margin_end = 18;
-            output_label.margin_top = 12;
-            output_label.margin_bottom = 12;
+            output_label.halign = Align.CENTER;
+            output_label.valign = Align.CENTER;
+            output_label.margin_start = 24;
+            output_label.margin_end = 24;
+            output_label.margin_top = 16;
+            output_label.margin_bottom = 16;
             output_label.add_css_class ("system-fetch-text");
+            output_label.add_css_class ("monospace");
             output_label.visible = false;
 
             content_wrapper.append (output_label);
@@ -79,8 +81,8 @@ namespace Poisk.UI {
             this.append (sep);
 
             // Footer
-            var footer_box = new Box (Orientation.HORIZONTAL, 8);
-            footer_box.margin_start = 12;
+            var footer_box = new Box (Orientation.HORIZONTAL, 6);
+            footer_box.margin_start = 14;
             footer_box.margin_end = 12;
             footer_box.margin_top = 4;
             footer_box.margin_bottom = 6;
@@ -97,6 +99,7 @@ namespace Poisk.UI {
             refresh_btn.valign = Align.CENTER;
             refresh_btn.tooltip_text = "Обновить системные данные (Ctrl+R)";
             refresh_btn.add_css_class ("flat");
+            refresh_btn.add_css_class ("circular");
             refresh_btn.clicked.connect (() => {
                 manager.invalidate_cache ();
                 load_info.begin (current_override_args);
@@ -108,6 +111,7 @@ namespace Poisk.UI {
             copy_btn.valign = Align.CENTER;
             copy_btn.tooltip_text = "Скопировать вывод в буфер обмена (Ctrl+C)";
             copy_btn.add_css_class ("flat");
+            copy_btn.add_css_class ("circular");
             copy_btn.clicked.connect (() => {
                 copy_to_clipboard ();
             });
@@ -118,6 +122,7 @@ namespace Poisk.UI {
             config_btn.valign = Align.CENTER;
             config_btn.tooltip_text = "Настроить системную информацию (:system)";
             config_btn.add_css_class ("flat");
+            config_btn.add_css_class ("circular");
             config_btn.clicked.connect (() => {
                 open_config_dialog ();
             });

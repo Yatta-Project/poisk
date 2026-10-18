@@ -184,29 +184,33 @@ namespace Poisk.Core {
         public void launch_in_terminal (string? override_args = null) {
             string cmd = get_effective_command (override_args);
             string term = find_terminal_emulator ();
+            string sh = (Environment.find_program_in_path ("bash") != null) ? "bash" : "sh";
+            string shell_cmd = "%s; echo; echo 'Нажмите Enter для выхода...'; read _line".printf (cmd);
 
             try {
                 if (term == "io.elementary.terminal") {
                     string[] argv = {
                         "io.elementary.terminal",
-                        "-x",
-                        "sh -c \"%s; echo; read -p 'Нажмите Enter для выхода...'\"".printf (cmd)
+                        "-n",
+                        "--",
+                        sh, "-c",
+                        shell_cmd
                     };
                     Process.spawn_async (null, argv, null, SpawnFlags.SEARCH_PATH, null, null);
                 } else if (term == "gnome-terminal" || term == "ptyxis") {
                     string[] argv = {
                         term,
                         "--",
-                        "sh", "-c",
-                        "%s; echo; read -p 'Нажмите Enter для выхода...'".printf (cmd)
+                        sh, "-c",
+                        shell_cmd
                     };
                     Process.spawn_async (null, argv, null, SpawnFlags.SEARCH_PATH, null, null);
                 } else if (term == "alacritty" || term == "kitty" || term == "foot") {
                     string[] argv = {
                         term,
                         "-e",
-                        "sh", "-c",
-                        "%s; echo; read -p 'Нажмите Enter для выхода...'".printf (cmd)
+                        sh, "-c",
+                        shell_cmd
                     };
                     Process.spawn_async (null, argv, null, SpawnFlags.SEARCH_PATH, null, null);
                 } else if (term == "xterm") {
@@ -219,7 +223,7 @@ namespace Poisk.Core {
                     Process.spawn_async (null, argv, null, SpawnFlags.SEARCH_PATH, null, null);
                 } else {
                     // Fallback using xdg-terminal-exec if available
-                    string[] argv = { "sh", "-c", cmd };
+                    string[] argv = { "xdg-terminal-exec", sh, "-c", shell_cmd };
                     Process.spawn_async (null, argv, null, SpawnFlags.SEARCH_PATH, null, null);
                 }
             } catch (Error e) {

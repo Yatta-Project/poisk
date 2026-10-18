@@ -117,7 +117,7 @@ namespace Poisk.Core {
                 if (in_bold) sb.append ("</b>");
                 if (in_italic) sb.append ("</i>");
 
-                string candidate = sb.str;
+                string candidate = "<span font_family=\"monospace\">" + sb.str + "</span>";
 
                 // Validate with Pango parser to ensure it never crashes
                 try {
@@ -127,10 +127,10 @@ namespace Poisk.Core {
                     return candidate;
                 } catch (Error err) {
                     // Fallback to safely escaped plain text
-                    return GLib.Markup.escape_text (strip_ansi (raw));
+                    return "<span font_family=\"monospace\">" + GLib.Markup.escape_text (strip_ansi (raw)) + "</span>";
                 }
             } catch (Error e) {
-                return GLib.Markup.escape_text (strip_ansi (raw));
+                return "<span font_family=\"monospace\">" + GLib.Markup.escape_text (strip_ansi (raw)) + "</span>";
             }
         }
 
