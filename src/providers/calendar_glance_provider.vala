@@ -323,9 +323,9 @@ namespace Poisk.Providers {
 
                 int64 diff_sec = start_unix - now_unix;
 
-                // STRICT USER REQUIREMENT:
-                // Show ONLY if starting in <= 5 minutes (300 sec) OR currently ongoing (diff_sec <= 0)
-                if (diff_sec <= 300) {
+                // USER REQUIREMENT:
+                // Show if starting in <= 10 minutes (600 sec) OR currently ongoing (diff_sec <= 0)
+                if (diff_sec <= 600) {
                     // Prioritize upcoming (score: 10000 - diff_sec) over ongoing (score: 5000 + diff_sec)
                     int64 score = (diff_sec >= 0) ? (10000 - diff_sec) : (5000 + diff_sec);
                     if (score > best_score) {
