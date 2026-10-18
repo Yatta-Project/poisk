@@ -26,6 +26,7 @@ namespace Poisk {
 
         private PoiskPreferencesWindow? prefs_window = null;
         private GroupManagerDialog? groups_window = null;
+        private CommandManagerDialog? commands_window = null;
 
         public void show_preferences () {
             if (prefs_window == null) {
@@ -48,6 +49,18 @@ namespace Poisk {
                 });
             }
             groups_window.present ();
+        }
+
+        public void show_manage_commands () {
+            if (commands_window == null) {
+                Gtk.Window? parent = (prefs_window != null && prefs_window.visible) ? (Gtk.Window) prefs_window : (Gtk.Window?) window;
+                commands_window = new CommandManagerDialog (parent);
+                commands_window.close_request.connect (() => {
+                    commands_window = null;
+                    return false;
+                });
+            }
+            commands_window.present ();
         }
 
         protected override void startup () {
@@ -145,6 +158,9 @@ namespace Poisk {
                 } else if (arg == "--manage-groups" || arg == "-g" || arg == "--groups") {
                     show_manage_groups ();
                     return 0;
+                } else if (arg == "--manage-commands" || arg == "-c" || arg == "--commands") {
+                    show_manage_commands ();
+                    return 0;
                 } else if (arg == "--quit" || arg == "-q") {
                     if (window != null) {
                         window.destroy ();
@@ -155,7 +171,7 @@ namespace Poisk {
                     // Daemon mode: stay resident in background without opening window
                     return 0;
                 } else if (arg == "--help" || arg == "-h") {
-                    command_line.print ("Поиск (Poisk) — GTK-ориентированный лёгкий аналог Spotlight\n\nИспользование:\n  poisk [ОПЦИИ]\n\nОпции:\n  -t, --toggle        Показать / скрыть палитру поиска\n  -p, --preferences   Открыть параметры Поиска\n  -g, --manage-groups Настроить группы и скрытые приложения\n  -b, --background    Запустить в фоновом режиме (демон)\n  -q, --quit          Завершить фоновый процесс лаунчера\n  -v, --version       Показать версию\n  -h, --help          Показать эту справку\n");
+                    command_line.print ("Поиск (Poisk) — GTK-ориентированный лёгкий аналог Spotlight\n\nИспользование:\n  poisk [ОПЦИИ]\n\nОпции:\n  -t, --toggle          Показать / скрыть палитру поиска\n  -p, --preferences     Открыть параметры Поиска\n  -g, --manage-groups   Настроить группы и скрытые приложения\n  -c, --manage-commands Настроить системные и пользовательские команды\n  -b, --background      Запустить в фоновом режиме (демон)\n  -q, --quit            Завершить фоновый процесс лаунчера\n  -v, --version         Показать версию\n  -h, --help            Показать эту справку\n");
                     return 0;
                 } else if (arg == "--version" || arg == "-v") {
                     command_line.print ("Poisk 1.1.0\nhttps://github.com/Yatta-Project/poisk\nОсновано на концепциях Vicinae (https://github.com/vicinaehq/vicinae)\n");

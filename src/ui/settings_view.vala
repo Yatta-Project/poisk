@@ -339,7 +339,31 @@ namespace Poisk.UI {
             manage_groups_row.activatable_widget = manage_btn;
             groups_prefs.add (manage_groups_row);
 
-            // Group 5: About
+            // Group 5: Commands
+            var commands_prefs = new Adw.PreferencesGroup ();
+            commands_prefs.title = "Команды и быстрые действия";
+            commands_prefs.description = "Встроенные команды системы и пользовательские скрипты";
+            add_group (commands_prefs);
+
+            var manage_commands_row = new Adw.ActionRow ();
+            manage_commands_row.title = "Настроить команды поиска";
+            manage_commands_row.subtitle = "Скрытие системных действий, добавление своих команд и значков";
+            var manage_cmds_btn = new Button.with_label ("Настроить...");
+            manage_cmds_btn.valign = Align.CENTER;
+            manage_cmds_btn.add_css_class ("suggested-action");
+            manage_cmds_btn.clicked.connect (() => {
+                try {
+                    string[] argv = { "poisk", "--manage-commands" };
+                    Process.spawn_async (null, argv, null, SpawnFlags.SEARCH_PATH, null, null);
+                } catch (Error e) {
+                    warning ("Failed to open command manager: %s", e.message);
+                }
+            });
+            manage_commands_row.add_suffix (manage_cmds_btn);
+            manage_commands_row.activatable_widget = manage_cmds_btn;
+            commands_prefs.add (manage_commands_row);
+
+            // Group 6: About
             var about_group = new Adw.PreferencesGroup ();
             about_group.title = "О программе";
             add_group (about_group);

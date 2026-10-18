@@ -43,8 +43,10 @@ namespace Poisk.Providers {
         public bool is_enabled { get; set; default = true; }
 
         private Gee.ArrayList<SystemAction> actions = new Gee.ArrayList<SystemAction> ();
+        private CommandManager command_manager;
 
         public SystemActionProvider () {
+            command_manager = CommandManager.get_default ();
             init_actions ();
         }
 
@@ -128,12 +130,14 @@ namespace Poisk.Providers {
             string q = query_text.strip ().down ();
             if (q.length == 0) return items;
 
+            // 1. Search Built-in Actions (if not hidden)
             foreach (var action in actions) {
                 if (cancellable != null && cancellable.is_cancelled ()) break;
+                if (command_manager.is_builtin_hidden (action.id)) continue;
 
                 int best_score = 0;
 
-                // 1. Check title
+                // Title match
                 string title_lower = action.title.down ();
                 if (title_lower == q) {
                     best_score = int.max (best_score, 1600);
@@ -143,7 +147,7 @@ namespace Poisk.Providers {
                     best_score = int.max (best_score, 700);
                 }
 
-                // 2. Check keywords
+                // Keywords match
                 foreach (var kw in action.keywords) {
                     string kw_lower = kw.down ();
                     if (kw_lower == q) {
@@ -180,6 +184,62 @@ namespace Poisk.Providers {
                 }
             }
 
+            // 2. Search Custom Commands
+            foreach (var cmd in command_manager.get_custom_commands ()) {
+                if (cancellable != null && cancellable.is_cancelled ()) break;
+                if (!cmd.is_enabled) continue;
+
+                int best_score = 0;
+
+                // Name match
+                string name_lower = cmd.name.down ();
+                if (name_lower == q) {
+                    best_score = int.max (best_score, 1600);
+                } else if (name_lower.has_prefix (q)) {
+                    best_score = int.max (best_score, 1200 + (100 - (name_lower.length - q.length)));
+                } else if (name_lower.contains (q)) {
+                    best_score = int.max (best_score, 700);
+                }
+
+                // Keywords match
+                foreach (var kw in cmd.get_keywords ()) {
+                    string kw_lower = kw.down ();
+                    if (kw_lower == q) {
+                        best_score = int.max (best_score, 1500);
+                    } else if (kw_lower.has_prefix (q)) {
+                        best_score = int.max (best_score, 1100 + (100 - (kw_lower.length - q.length)));
+                    } else if (kw_lower.contains (q)) {
+                        best_score = int.max (best_score, 600);
+                    } else {
+                        int f_score = SearchEngine.fuzzy_score (q, kw_lower);
+                        if (f_score > 60) {
+                            best_score = int.max (best_score, f_score + 100);
+                        }
+                    }
+                }
+
+                if (best_score > 0) {
+                    string sub = (cmd.description.length > 0) ? cmd.description : cmd.command;
+                    var item = new SearchItem (
+                        cmd.id,
+                        cmd.name,
+                        sub,
+                        cmd.icon_name,
+                        "Команда"
+                    );
+                    item.score = best_score;
+                    item.action_label = "Выполнить";
+                    item.preview_text = "<b>%s</b>\n\n%s\n\nКоманда: <code>%s</code>\n\nНажмите ↵ для запуска.".printf (
+                        Markup.escape_text (cmd.name),
+                        Markup.escape_text (sub),
+                        Markup.escape_text (cmd.command)
+                    );
+                    item.provider = this;
+                    item.target_object = cmd;
+                    items.append (item);
+                }
+            }
+
             return items;
         }
 
@@ -187,6 +247,12 @@ namespace Poisk.Providers {
             var action = item.target_object as SystemAction;
             if (action != null) {
                 action.execute ();
+                return;
+            }
+
+            var cmd = item.target_object as CustomCommand;
+            if (cmd != null) {
+                spawn_cmd ({ "/bin/sh", "-c", cmd.command });
             }
         }
     }
