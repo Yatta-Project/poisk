@@ -60,6 +60,7 @@ sources = files(
   'src/providers/app_provider.vala',
   'src/providers/window_provider.vala',
   'src/providers/calc_provider.vala',
+  'src/providers/system_action_provider.vala',
   'src/providers/updates_glance_provider.vala',
   'src/providers/calendar_glance_provider.vala',
   'src/ui/satellite_button.vala',

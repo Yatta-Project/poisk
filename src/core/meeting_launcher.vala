@@ -12,8 +12,9 @@ namespace Poisk.Core {
                 var regex = new Regex (
                     "(https?:\\/\\/(?:meet\\.google\\.com\\/[a-z]{3}-[a-z]{4}-[a-z]{3}" +
                     "|[a-zA-Z0-9\\.\\-]*zoom\\.us\\/[a-z]\\/[0-9]+(?:\\?[^\\s\"'>]*)?" +
-                    "|telemost\\.yandex\\.ru\\/j\\/[0-9]+" +
+                    "|[a-zA-Z0-9\\.\\-]*telemost(?:\\.360)?\\.yandex\\.ru\\/j\\/[0-9]+" +
                     "|teams\\.microsoft\\.com\\/l\\/meetup-join\\/[^\\s\"'>]+" +
+                    "|[a-zA-Z0-9\\.\\-]*(?:mts-link\\.ru|webinar\\.ru)\\/[^\\s\"'>]+" +
                     "|meet\\.jit\\.si\\/[^\\s\"'>]+" +
                     "|jazz\\.sber\\.ru\\/[^\\s\"'>]+" +
                     "|calls\\.vk\\.com\\/[^\\s\"'>]+" +
@@ -34,7 +35,7 @@ namespace Poisk.Core {
 
         public static string get_meeting_platform_icon (string url) {
             string lower = url.down ();
-            if (lower.contains ("telemost.yandex.ru")) {
+            if (lower.contains ("telemost")) {
                 return "yandex-telemost";
             }
             if (lower.contains ("t.me")) {
@@ -52,7 +53,7 @@ namespace Poisk.Core {
             if (lower.contains ("jazz.sber.ru")) {
                 return "camera-web-symbolic";
             }
-            if (lower.contains ("meet.google.com")) {
+            if (lower.contains ("meet.google.com") || lower.contains ("mts-link.ru") || lower.contains ("webinar.ru")) {
                 return "camera-web-symbolic";
             }
             return "io.elementary.calendar.event-new-symbolic";
@@ -73,7 +74,7 @@ namespace Poisk.Core {
             }
 
             // 3. Yandex Telemost
-            if (url.contains ("telemost.yandex.ru/j/")) {
+            if (url.contains ("telemost") && url.contains ("/j/")) {
                 if (try_launch_telemost (url)) return;
             }
 
@@ -198,21 +199,31 @@ namespace Poisk.Core {
 
         private static bool try_launch_telemost (string url) {
             try {
-                var regex = new Regex ("telemost\\.yandex\\.ru\\/j\\/([0-9]+)", RegexCompileFlags.CASELESS);
+                var regex = new Regex ("telemost(?:\\.360)?\\.yandex\\.ru\\/j\\/([0-9]+)", RegexCompileFlags.CASELESS);
                 MatchInfo match;
                 if (regex.match (url, 0, out match)) {
                     string meet_id = match.fetch (1);
                     string custom_uri = "telemost://j/" + meet_id;
 
                     if (AppInfo.get_default_for_uri_scheme ("telemost") != null) {
-                        AppInfo.launch_default_for_uri (custom_uri, null);
-                        return true;
+                        try {
+                            AppInfo.launch_default_for_uri (custom_uri, null);
+                            return true;
+                        } catch (Error e) {
+                        }
                     }
 
                     if (Environment.find_program_in_path ("yandex-telemost") != null) {
                         string[] argv = { "yandex-telemost", custom_uri };
                         Process.spawn_async (null, argv, null, SpawnFlags.SEARCH_PATH, null, null);
                         return true;
+                    }
+
+                    // Fallback to opening original URL in browser
+                    try {
+                        AppInfo.launch_default_for_uri (url, null);
+                        return true;
+                    } catch (Error e) {
                     }
                 }
             } catch (Error e) {

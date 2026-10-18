@@ -70,6 +70,7 @@ namespace Poisk {
             var app_provider = new AppProvider ();
             var window_provider = new WindowProvider (desktop_bridge);
             var calc_provider = new CalcProvider ();
+            var system_action_provider = new SystemActionProvider ();
 
             var schema_source = SettingsSchemaSource.get_default ();
             if (schema_source != null && schema_source.lookup ("io.github.mrlogiousbanana.poisk", true) != null) {
@@ -92,6 +93,7 @@ namespace Poisk {
             engine.register_provider (app_provider);
             engine.register_provider (window_provider);
             engine.register_provider (calc_provider);
+            engine.register_provider (system_action_provider);
 
             // Init centralized glance manager, providers and D-Bus interface
             glance_manager = GlanceManager.get_default ();

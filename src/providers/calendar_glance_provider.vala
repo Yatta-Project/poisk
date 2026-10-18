@@ -9,6 +9,8 @@ namespace Poisk.Providers {
         public DateTime? start_time { get; set; default = null; }
         public DateTime? end_time { get; set; default = null; }
         public string? meeting_url { get; set; default = null; }
+        public string? conference_url { get; set; default = null; }
+        public string? event_url { get; set; default = null; }
         public string? location { get; set; default = null; }
         public bool is_all_day { get; set; default = false; }
     }
@@ -197,21 +199,35 @@ namespace Poisk.Providers {
                 } else if (line_trimmed == "END:VEVENT") {
                     if (current != null && current.uid.length > 0) {
                         string full_desc = desc_builder.str;
-                        // 1. Try URL field first
-                        if (current.meeting_url != null) {
-                            current.meeting_url = MeetingLauncher.detect_meeting_url (current.meeting_url);
+
+                        // Priority 1: Direct conference URL (from CONFERENCE or X-TELEMOST-CONFERENCE)
+                        if (current.conference_url != null && current.conference_url.length > 0) {
+                            current.meeting_url = current.conference_url;
                         }
-                        // 2. Try LOCATION
+
+                        // Priority 2: Detect meeting platform in LOCATION
                         if (current.meeting_url == null && current.location != null) {
                             current.meeting_url = MeetingLauncher.detect_meeting_url (current.location);
                         }
-                        // 3. Try DESCRIPTION
+
+                        // Priority 3: Detect meeting platform in DESCRIPTION
                         if (current.meeting_url == null && full_desc.length > 0) {
                             current.meeting_url = MeetingLauncher.detect_meeting_url (full_desc);
                         }
-                        // 4. Fallback: if URL or LOCATION starts with http, use it as fallback meeting url
+
+                        // Priority 4: Detect meeting platform in event_url
+                        if (current.meeting_url == null && current.event_url != null) {
+                            current.meeting_url = MeetingLauncher.detect_meeting_url (current.event_url);
+                        }
+
+                        // Priority 5: Fallback to direct http in LOCATION
                         if (current.meeting_url == null && current.location != null && current.location.has_prefix ("http")) {
                             current.meeting_url = current.location;
+                        }
+
+                        // Priority 6: Fallback to event page URL (e.g. Яндекс Календарь)
+                        if (current.meeting_url == null && current.event_url != null && current.event_url.has_prefix ("http")) {
+                            current.meeting_url = current.event_url;
                         }
 
                         result.add (current);
@@ -241,9 +257,17 @@ namespace Poisk.Providers {
                             desc_builder.append (unescape_ical_text (line_trimmed.substring (colon + 1)));
                             desc_builder.append ("\n");
                         }
+                    } else if (line_trimmed.has_prefix ("CONFERENCE") || line_trimmed.has_prefix ("X-TELEMOST-CONFERENCE")) {
+                        int colon = line_trimmed.index_of (":");
+                        if (colon >= 0) {
+                            string raw_conf = line_trimmed.substring (colon + 1).strip ();
+                            if (raw_conf.has_prefix ("http")) {
+                                current.conference_url = raw_conf;
+                            }
+                        }
                     } else if (line_trimmed.has_prefix ("URL")) {
                         int colon = line_trimmed.index_of (":");
-                        if (colon >= 0) current.meeting_url = line_trimmed.substring (colon + 1).strip ();
+                        if (colon >= 0) current.event_url = line_trimmed.substring (colon + 1).strip ();
                     }
                 }
             }
