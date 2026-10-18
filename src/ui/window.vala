@@ -957,10 +957,10 @@ namespace Poisk.UI {
                     background-color: alpha(currentColor, 0.08);
                     color: @theme_fg_color;
                     border: 1px solid alpha(currentColor, 0.12);
-                    border-radius: 8px;
-                    padding: 4px 9px;
+                    border-radius: 10px;
+                    padding: 4px 10px;
                     margin: 0;
-                    min-height: 28px;
+                    min-height: 30px;
                     transition: all 140ms ease;
                     box-shadow: none;
                     outline: none;
@@ -985,19 +985,19 @@ namespace Poisk.UI {
 
                 .glance-icon-emoji {
                     font-size: 13px;
-                    margin-right: 2px;
+                    margin-right: 1px;
                 }
 
                 .glance-icon-image {
                     opacity: 0.90;
-                    margin-right: 2px;
+                    margin-right: 1px;
                 }
 
                 .glance-title {
                     font-size: 12.5px;
                     font-weight: 500;
                     opacity: 0.90;
-                    margin-right: 4px;
+                    margin-right: 2px;
                 }
 
                 .glance-key-badge {
@@ -1005,7 +1005,7 @@ namespace Poisk.UI {
                     color: currentColor;
                     font-size: 11px;
                     font-weight: 600;
-                    border-radius: 4px;
+                    border-radius: 5px;
                     padding: 1px 5px;
                     opacity: 0.75;
                     margin-left: 2px;
@@ -1030,7 +1030,7 @@ namespace Poisk.UI {
 
                 .monolithic-capsule .poisk-pill-header {
                     padding-left: 0px;
-                    padding-right: 16px;
+                    padding-right: 12px;
                     margin: 0;
                     border: none;
                 }
@@ -1050,7 +1050,7 @@ namespace Poisk.UI {
 
                 .island-capsule .poisk-pill-header {
                     padding-left: 16px;
-                    padding-right: 16px;
+                    padding-right: 12px;
                 }
 
                 .island-capsule entry.pill-entry,
