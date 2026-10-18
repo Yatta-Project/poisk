@@ -5,18 +5,23 @@ namespace Poisk.UI {
 
     public class GlancePill : Box {
         private Button action_button;
+        private Stack trailing_stack;
+        private Label badge_label;
         private Button close_button;
+
         private Box content_box;
         private Box dot_widget;
         private Label icon_label;
         private Image icon_image;
         private Label title_label;
-        private Label badge_label;
         private ProgressBar? progress_bar = null;
 
         private Gtk.Widget? custom_child = null;
         private Gtk.CssProvider css_provider;
         private Gtk.CssProvider dot_css_provider;
+
+        private bool is_hovered = false;
+        private bool has_badge = true;
 
         public delegate void ActionCallback ();
         private ActionCallback? action_cb = null;
@@ -53,7 +58,7 @@ namespace Poisk.UI {
                 );
             }
 
-            // Main clickable action button (contains dot, icon, title, badge)
+            // Main clickable action button (contains dot, icon, title)
             action_button = new Button ();
             action_button.add_css_class ("glance-action-btn");
             action_button.valign = Align.CENTER;
@@ -87,15 +92,10 @@ namespace Poisk.UI {
             title_label.ellipsize = Pango.EllipsizeMode.END;
             title_label.max_width_chars = 36;
 
-            // Key badge (default ↵)
-            badge_label = new Label ("↵");
-            badge_label.add_css_class ("glance-key-badge");
-
             content_box.append (dot_widget);
             content_box.append (icon_label);
             content_box.append (icon_image);
             content_box.append (title_label);
-            content_box.append (badge_label);
 
             action_button.set_child (content_box);
 
@@ -103,8 +103,18 @@ namespace Poisk.UI {
                 execute_action ();
             });
 
-            // Close button (×) to dismiss/close the glance
-            close_button = new Button.from_icon_name ("window-close-symbolic");
+            // Trailing Stack: morphs between shortcut badge (↵) and close button (✕) on hover
+            trailing_stack = new Stack ();
+            trailing_stack.transition_type = StackTransitionType.CROSSFADE;
+            trailing_stack.transition_duration = 120;
+            trailing_stack.valign = Align.CENTER;
+
+            badge_label = new Label ("↵");
+            badge_label.add_css_class ("glance-key-badge");
+            badge_label.valign = Align.CENTER;
+            trailing_stack.add_named (badge_label, "badge");
+
+            close_button = new Button ();
             close_button.add_css_class ("glance-close-btn");
             close_button.valign = Align.CENTER;
             close_button.halign = Align.CENTER;
@@ -112,12 +122,42 @@ namespace Poisk.UI {
             close_button.cursor = new Gdk.Cursor.from_name ("pointer", null);
             close_button.can_focus = false;
 
+            var close_icon = new Image.from_icon_name ("window-close-symbolic");
+            close_icon.pixel_size = 10;
+            close_icon.valign = Align.CENTER;
+            close_button.set_child (close_icon);
+
             close_button.clicked.connect (() => {
                 dismiss ();
             });
+            trailing_stack.add_named (close_button, "close");
 
             this.append (action_button);
-            this.append (close_button);
+            this.append (trailing_stack);
+
+            // Motion controller on GlancePill: enter shows close button, leave restores Enter badge
+            var motion = new EventControllerMotion ();
+            motion.enter.connect (() => {
+                is_hovered = true;
+                update_trailing_state ();
+            });
+            motion.leave.connect (() => {
+                is_hovered = false;
+                update_trailing_state ();
+            });
+            this.add_controller (motion);
+
+            update_trailing_state ();
+        }
+
+        private void update_trailing_state () {
+            if (is_hovered) {
+                trailing_stack.set_visible_child_name ("close");
+                trailing_stack.visible = true;
+            } else {
+                trailing_stack.set_visible_child_name ("badge");
+                trailing_stack.visible = has_badge;
+            }
         }
 
         public void set_dismiss_callback (owned DismissCallback? cb) {
@@ -143,7 +183,7 @@ namespace Poisk.UI {
         public void apply_item (GlanceItem item, owned ActionCallback? cb = null) {
             action_cb = (owned) cb;
 
-            // Tooltip
+            // Tooltip on action button
             if (item.tooltip != null && item.tooltip.length > 0) {
                 action_button.tooltip_markup = item.tooltip;
             } else {
@@ -198,10 +238,11 @@ namespace Poisk.UI {
             // Shortcut badge
             if (item.shortcut_badge != null && item.shortcut_badge.length > 0) {
                 badge_label.label = item.shortcut_badge;
-                badge_label.visible = true;
+                has_badge = true;
             } else {
-                badge_label.visible = false;
+                has_badge = false;
             }
+            update_trailing_state ();
 
             // Progress bar
             if (item.progress >= 0.0) {

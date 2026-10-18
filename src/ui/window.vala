@@ -1015,20 +1015,22 @@ namespace Poisk.UI {
                 }
 
                 button.glance-close-btn {
-                    background: transparent;
+                    background: alpha(currentColor, 0.12);
                     border: none;
                     box-shadow: none;
                     padding: 2px 5px;
-                    margin: 0 0 0 2px;
-                    min-width: 20px;
-                    min-height: 20px;
+                    margin: 0;
+                    min-width: 18px;
+                    min-height: 18px;
                     color: inherit;
-                    opacity: 0.55;
-                    border-radius: 6px;
+                    opacity: 0.75;
+                    border-radius: 5px;
+                    transition: all 120ms ease;
                 }
 
                 button.glance-close-btn:hover {
-                    background: alpha(currentColor, 0.16);
+                    background: #ef4444;
+                    color: #ffffff;
                     opacity: 1.0;
                 }
 
@@ -1063,9 +1065,11 @@ namespace Poisk.UI {
                     font-size: 11px;
                     font-weight: 600;
                     border-radius: 5px;
-                    padding: 1px 5px;
+                    padding: 2px 6px;
+                    margin: 0;
+                    min-width: 18px;
+                    min-height: 18px;
                     opacity: 0.75;
-                    margin-left: 2px;
                 }
 
                 /* Clean Entry without blue focus border */
