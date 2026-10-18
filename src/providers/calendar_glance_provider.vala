@@ -23,13 +23,27 @@ namespace Poisk.Providers {
         private bool is_scanning = false;
 
         public CalendarGlanceProvider () {
+            var glance_mgr = GlanceManager.get_default ();
+            glance_mgr.glance_activated.connect ((id) => {
+                if (current_item != null && (id == current_item.id || id == "calendar" || id.has_prefix ("calendar:"))) {
+                    current_item = null;
+                    glance_updated (null);
+                }
+            });
+            glance_mgr.glance_dismissed.connect ((id) => {
+                if (current_item != null && (id == current_item.id || id == "calendar" || id.has_prefix ("calendar:"))) {
+                    current_item = null;
+                    glance_updated (null);
+                }
+            });
+
             // Initial scan in background after 1 second
             GLib.Timeout.add_seconds (1, () => {
                 scan_events_async.begin ();
                 return GLib.Source.REMOVE;
             });
 
-            // Poll every 15 seconds to catch the exact 5-minute window
+            // Poll every 15 seconds to catch the exact window
             poll_timer_id = GLib.Timeout.add_seconds (15, () => {
                 scan_events_async.begin ();
                 return GLib.Source.CONTINUE;

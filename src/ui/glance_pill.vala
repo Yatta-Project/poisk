@@ -3,7 +3,9 @@ using Poisk.Core;
 
 namespace Poisk.UI {
 
-    public class GlancePill : Button {
+    public class GlancePill : Box {
+        private Button action_button;
+        private Button close_button;
         private Box content_box;
         private Box dot_widget;
         private Label icon_label;
@@ -18,20 +20,22 @@ namespace Poisk.UI {
 
         public delegate void ActionCallback ();
         private ActionCallback? action_cb = null;
+        public delegate void DismissCallback ();
+        private DismissCallback? dismiss_cb = null;
 
         public signal void activated ();
+        public signal void dismissed ();
 
         public bool has_action {
             get { return action_cb != null; }
         }
 
         public GlancePill () {
-            Object ();
+            Object (orientation: Orientation.HORIZONTAL, spacing: 2);
 
             this.add_css_class ("poisk-glance-pill");
             this.valign = Align.CENTER;
             this.halign = Align.END;
-            this.cursor = new Gdk.Cursor.from_name ("pointer", null);
 
             css_provider = new Gtk.CssProvider ();
             dot_css_provider = new Gtk.CssProvider ();
@@ -48,6 +52,12 @@ namespace Poisk.UI {
                     Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
                 );
             }
+
+            // Main clickable action button (contains dot, icon, title, badge)
+            action_button = new Button ();
+            action_button.add_css_class ("glance-action-btn");
+            action_button.valign = Align.CENTER;
+            action_button.cursor = new Gdk.Cursor.from_name ("pointer", null);
 
             content_box = new Box (Orientation.HORIZONTAL, 6);
             content_box.valign = Align.CENTER;
@@ -75,7 +85,7 @@ namespace Poisk.UI {
             title_label.add_css_class ("glance-title");
             title_label.use_markup = true;
             title_label.ellipsize = Pango.EllipsizeMode.END;
-            title_label.max_width_chars = 40;
+            title_label.max_width_chars = 36;
 
             // Key badge (default ↵)
             badge_label = new Label ("↵");
@@ -87,19 +97,46 @@ namespace Poisk.UI {
             content_box.append (title_label);
             content_box.append (badge_label);
 
-            this.set_child (content_box);
+            action_button.set_child (content_box);
 
-            this.clicked.connect (() => {
+            action_button.clicked.connect (() => {
                 execute_action ();
             });
+
+            // Close button (×) to dismiss/close the glance
+            close_button = new Button.from_icon_name ("window-close-symbolic");
+            close_button.add_css_class ("glance-close-btn");
+            close_button.valign = Align.CENTER;
+            close_button.halign = Align.CENTER;
+            close_button.tooltip_text = "Скрыть напоминание (Delete)";
+            close_button.cursor = new Gdk.Cursor.from_name ("pointer", null);
+            close_button.can_focus = false;
+
+            close_button.clicked.connect (() => {
+                dismiss ();
+            });
+
+            this.append (action_button);
+            this.append (close_button);
+        }
+
+        public void set_dismiss_callback (owned DismissCallback? cb) {
+            dismiss_cb = (owned) cb;
+        }
+
+        public void dismiss () {
+            if (dismiss_cb != null) {
+                dismiss_cb ();
+            }
+            dismissed ();
         }
 
         public void set_custom_child (Gtk.Widget? widget) {
             custom_child = widget;
             if (widget != null) {
-                this.set_child (widget);
+                action_button.set_child (widget);
             } else {
-                this.set_child (content_box);
+                action_button.set_child (content_box);
             }
         }
 
@@ -108,10 +145,10 @@ namespace Poisk.UI {
 
             // Tooltip
             if (item.tooltip != null && item.tooltip.length > 0) {
-                this.tooltip_markup = item.tooltip;
+                action_button.tooltip_markup = item.tooltip;
             } else {
-                this.tooltip_markup = null;
-                this.tooltip_text = null;
+                action_button.tooltip_markup = null;
+                action_button.tooltip_text = null;
             }
 
             // Custom in-process widget takes precedence over standard layout
@@ -217,7 +254,7 @@ namespace Poisk.UI {
             this.add_css_class ("poisk-glance-custom");
 
             var sb = new StringBuilder ();
-            sb.append ("button.poisk-glance-pill.poisk-glance-custom {\n");
+            sb.append (".poisk-glance-pill.poisk-glance-custom {\n");
 
             if (item.background != null && item.background.length > 0) {
                 sb.append_printf ("    background: %s !important;\n", item.background);

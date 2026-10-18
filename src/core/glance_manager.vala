@@ -16,20 +16,65 @@ namespace Poisk.Core {
         private Gee.ArrayList<GlanceProvider> providers;
         private uint expiry_timer_id = 0;
         private GlanceItem? last_emitted = null;
+        private string dismissed_path;
 
         public signal void glance_changed (GlanceItem? active_item);
         public signal void glance_activated (string id);
+        public signal void glance_dismissed (string id);
 
         public GlanceManager () {
             items = new Gee.HashMap<string, GlanceItem> ();
             connected_meeting_ids = new Gee.HashSet<string> ();
             providers = new Gee.ArrayList<GlanceProvider> ();
 
+            init_storage ();
+
             // Check expirations every second
             expiry_timer_id = GLib.Timeout.add_seconds (1, () => {
                 check_expirations ();
                 return GLib.Source.CONTINUE;
             });
+        }
+
+        private void init_storage () {
+            string config_dir = GLib.Path.build_filename (GLib.Environment.get_user_config_dir (), "poisk");
+            GLib.DirUtils.create_with_parents (config_dir, 0755);
+            dismissed_path = GLib.Path.build_filename (config_dir, "dismissed_glances.json");
+            load_dismissed ();
+        }
+
+        private void load_dismissed () {
+            if (!GLib.FileUtils.test (dismissed_path, GLib.FileTest.EXISTS)) return;
+            try {
+                var parser = new Json.Parser ();
+                parser.load_from_file (dismissed_path);
+                var root = parser.get_root ();
+                if (root != null && root.get_node_type () == Json.NodeType.ARRAY) {
+                    var arr = root.get_array ();
+                    for (uint i = 0; i < arr.get_length (); i++) {
+                        string val = arr.get_string_element (i);
+                        if (val.length > 0) connected_meeting_ids.add (val);
+                    }
+                }
+            } catch (Error e) {
+                warning ("Failed to load dismissed glances: %s", e.message);
+            }
+        }
+
+        private void save_dismissed () {
+            try {
+                var builder = new Json.Builder ();
+                builder.begin_array ();
+                foreach (var id in connected_meeting_ids) {
+                    builder.add_string_value (id);
+                }
+                builder.end_array ();
+                var generator = new Json.Generator ();
+                generator.set_root (builder.get_root ());
+                generator.to_file (dismissed_path);
+            } catch (Error e) {
+                warning ("Failed to save dismissed glances: %s", e.message);
+            }
         }
 
         ~GlanceManager () {
@@ -55,7 +100,7 @@ namespace Poisk.Core {
         }
 
         public void set_glance (GlanceItem item) {
-            // If this meeting was already connected to via the pill, don't show it again
+            // If this meeting was already connected to or dismissed, don't show it again
             if (connected_meeting_ids.contains (item.id)) {
                 return;
             }
@@ -65,15 +110,37 @@ namespace Poisk.Core {
         }
 
         public void clear_glance (string id) {
+            bool modified = false;
             if (items.has_key (id)) {
                 items.unset (id);
+                modified = true;
+            }
+
+            var to_remove = new Gee.ArrayList<string> ();
+            foreach (var k in items.keys) {
+                if (k.has_prefix (id + ":")) {
+                    to_remove.add (k);
+                }
+            }
+            foreach (var k in to_remove) {
+                items.unset (k);
+                modified = true;
+            }
+
+            if (modified) {
                 recalculate_active ();
             }
         }
 
+        public void dismiss_glance (string id) {
+            connected_meeting_ids.add (id);
+            save_dismissed ();
+            clear_glance (id);
+            glance_dismissed (id);
+        }
+
         public void mark_connected (string meeting_id) {
-            connected_meeting_ids.add (meeting_id);
-            clear_glance (meeting_id);
+            dismiss_glance (meeting_id);
         }
 
         public bool is_connected (string meeting_id) {
@@ -108,6 +175,7 @@ namespace Poisk.Core {
             // Remember connected meetings (e.g. "calendar:123" or "calendar")
             if (item.id.has_prefix ("calendar") || item.id.has_prefix ("meet")) {
                 connected_meeting_ids.add (item.id);
+                save_dismissed ();
             }
 
             // Execute native callback or command / url / app

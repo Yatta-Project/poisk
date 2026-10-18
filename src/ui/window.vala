@@ -670,6 +670,8 @@ namespace Poisk.UI {
                 if (item != null) {
                     pill_header.apply_glance_item (item, () => {
                         glance_mgr.execute_item (item);
+                    }, () => {
+                        glance_mgr.dismiss_glance (item.id);
                     });
                 } else {
                     pill_header.clear_glance ();
@@ -680,6 +682,8 @@ namespace Poisk.UI {
             if (initial_glance != null) {
                 pill_header.apply_glance_item (initial_glance, () => {
                     glance_mgr.execute_item (initial_glance);
+                }, () => {
+                    glance_mgr.dismiss_glance (initial_glance.id);
                 });
             }
 
@@ -849,6 +853,16 @@ namespace Poisk.UI {
                             return true;
                         }
                     }
+
+                    if (keyval == Gdk.Key.Delete || keyval == Gdk.Key.BackSpace) {
+                        if (pill_header.get_text ().length == 0) {
+                            var glance = pill_header.get_glance_pill ();
+                            if (glance.visible && glance.has_action) {
+                                glance.dismiss ();
+                                return true;
+                            }
+                        }
+                    }
                 }
 
                 return false;
@@ -967,13 +981,13 @@ namespace Poisk.UI {
                 }
 
                 /* Header Glance Action Pill (Raycast style) */
-                button.poisk-glance-pill {
+                .poisk-glance-pill {
                     background-image: none;
                     background-color: alpha(currentColor, 0.08);
                     color: @theme_fg_color;
                     border: 1px solid alpha(currentColor, 0.12);
                     border-radius: 10px;
-                    padding: 4px 10px;
+                    padding: 2px 4px 2px 6px;
                     margin: 0;
                     min-height: 30px;
                     transition: all 140ms ease;
@@ -981,13 +995,41 @@ namespace Poisk.UI {
                     outline: none;
                 }
 
-                button.poisk-glance-pill:hover {
-                    background-color: alpha(currentColor, 0.14);
-                    border-color: alpha(currentColor, 0.24);
+                .poisk-glance-pill:hover {
+                    background-color: alpha(currentColor, 0.13);
+                    border-color: alpha(currentColor, 0.22);
                 }
 
-                button.poisk-glance-pill:active {
-                    background-color: alpha(currentColor, 0.22);
+                button.glance-action-btn {
+                    background: transparent;
+                    border: none;
+                    box-shadow: none;
+                    padding: 2px 4px;
+                    margin: 0;
+                    color: inherit;
+                    border-radius: 6px;
+                }
+
+                button.glance-action-btn:hover {
+                    background: alpha(currentColor, 0.08);
+                }
+
+                button.glance-close-btn {
+                    background: transparent;
+                    border: none;
+                    box-shadow: none;
+                    padding: 2px 5px;
+                    margin: 0 0 0 2px;
+                    min-width: 20px;
+                    min-height: 20px;
+                    color: inherit;
+                    opacity: 0.55;
+                    border-radius: 6px;
+                }
+
+                button.glance-close-btn:hover {
+                    background: alpha(currentColor, 0.16);
+                    opacity: 1.0;
                 }
 
                 .glance-dot {

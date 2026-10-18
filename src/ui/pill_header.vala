@@ -28,6 +28,10 @@ namespace Poisk.UI {
             entry.add_css_class ("pill-entry");
 
             glance_pill = new GlancePill ();
+            glance_pill.dismissed.connect (() => {
+                glance_revealer.reveal_child = false;
+            });
+
             glance_revealer = new Revealer ();
             glance_revealer.transition_type = RevealerTransitionType.CROSSFADE;
             glance_revealer.transition_duration = 160;
@@ -53,9 +57,14 @@ namespace Poisk.UI {
             this.append (glance_revealer);
         }
 
-        public void apply_glance_item (Poisk.Core.GlanceItem item, owned GlancePill.ActionCallback? cb = null) {
+        public void apply_glance_item (Poisk.Core.GlanceItem item, owned GlancePill.ActionCallback? cb = null, owned GlancePill.DismissCallback? dismiss_cb = null) {
+            glance_pill.set_dismiss_callback ((owned) dismiss_cb);
             glance_pill.apply_item (item, (owned) cb);
             glance_revealer.reveal_child = (entry.get_text ().length == 0 && glance_pill.has_action);
+        }
+
+        public void dismiss_glance () {
+            glance_pill.dismiss ();
         }
 
         public void set_glance (string? icon_name, string? emoji, string text, owned GlancePill.ActionCallback? cb = null) {

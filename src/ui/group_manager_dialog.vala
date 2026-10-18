@@ -31,6 +31,15 @@ namespace Poisk.UI {
             add_btn.add_css_class ("suggested-action");
             add_btn.clicked.connect (on_add_group_clicked);
             header.pack_start (add_btn);
+
+            var cmds_btn = new Button.with_label ("⚡ Команды...");
+            cmds_btn.tooltip_text = "Настроить системные и пользовательские команды поиска";
+            cmds_btn.clicked.connect (() => {
+                var dlg = new CommandManagerDialog (this);
+                dlg.present ();
+            });
+            header.pack_end (cmds_btn);
+
             main_box.append (header);
 
             // Filter Bar
@@ -48,6 +57,14 @@ namespace Poisk.UI {
                 refresh_groups ();
             });
             filter_box.append (search_entry);
+
+            var cmds_quick_btn = new Button.with_label ("⚡ Команды...");
+            cmds_quick_btn.tooltip_text = "Настроить системные и пользовательские команды поиска";
+            cmds_quick_btn.clicked.connect (() => {
+                var dlg = new CommandManagerDialog (this);
+                dlg.present ();
+            });
+            filter_box.append (cmds_quick_btn);
 
             main_box.append (filter_box);
 
