@@ -664,25 +664,24 @@ namespace Poisk.UI {
                 this.set_visible (false);
             });
 
-            // Set test glance pill (Raycast-style header action pill)
-            pill_header.set_glance (
-                "software-update-available-symbolic",
-                null,
-                "5 обновлений",
-                () => {
-                    try {
-                        string[] argv = { "io.elementary.appcenter", "--show-updates" };
-                        Process.spawn_async (null, argv, null, SpawnFlags.SEARCH_PATH, null, null);
-                    } catch (Error e) {
-                        try {
-                            string[] fallback = { "io.elementary.appcenter" };
-                            Process.spawn_async (null, fallback, null, SpawnFlags.SEARCH_PATH, null, null);
-                        } catch (Error e2) {
-                            warning ("Failed to open updates: %s", e2.message);
-                        }
-                    }
+            // Wire to centralized GlanceManager
+            var glance_mgr = Poisk.Core.GlanceManager.get_default ();
+            glance_mgr.glance_changed.connect ((item) => {
+                if (item != null) {
+                    pill_header.apply_glance_item (item, () => {
+                        glance_mgr.execute_item (item);
+                    });
+                } else {
+                    pill_header.clear_glance ();
                 }
-            );
+            });
+
+            var initial_glance = glance_mgr.get_active_glance ();
+            if (initial_glance != null) {
+                pill_header.apply_glance_item (initial_glance, () => {
+                    glance_mgr.execute_item (initial_glance);
+                });
+            }
 
             // Results Body
             results_card = new Box (Orientation.VERTICAL, 4);
@@ -974,6 +973,14 @@ namespace Poisk.UI {
 
                 button.poisk-glance-pill:active {
                     background-color: alpha(currentColor, 0.22);
+                }
+
+                .glance-dot {
+                    min-width: 6px;
+                    min-height: 6px;
+                    border-radius: 9999px;
+                    background-color: #22c55e;
+                    margin-right: 2px;
                 }
 
                 .glance-icon-emoji {

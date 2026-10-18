@@ -53,6 +53,11 @@ namespace Poisk.UI {
             this.append (glance_revealer);
         }
 
+        public void apply_glance_item (Poisk.Core.GlanceItem item, owned GlancePill.ActionCallback? cb = null) {
+            glance_pill.apply_item (item, (owned) cb);
+            glance_revealer.reveal_child = (entry.get_text ().length == 0 && glance_pill.has_action);
+        }
+
         public void set_glance (string? icon_name, string? emoji, string text, owned GlancePill.ActionCallback? cb = null) {
             glance_pill.set_glance (icon_name, emoji, text, (owned) cb);
             glance_revealer.reveal_child = (entry.get_text ().length == 0 && glance_pill.has_action);

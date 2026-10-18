@@ -12,6 +12,9 @@ namespace Poisk {
         private DesktopBridge desktop_bridge;
         private LauncherWindow? window = null;
         private int64 last_toggle_time = 0;
+        private GlanceManager glance_manager;
+        private GlanceDBusService glance_dbus_service;
+        private UpdatesGlanceProvider updates_glance_provider;
 
         public Application () {
             Object (
@@ -89,6 +92,19 @@ namespace Poisk {
             engine.register_provider (window_provider);
             engine.register_provider (calc_provider);
 
+            // Init centralized glance manager, providers and D-Bus interface
+            glance_manager = GlanceManager.get_default ();
+            updates_glance_provider = new UpdatesGlanceProvider ();
+            glance_manager.register_provider (updates_glance_provider);
+
+            try {
+                var connection = Bus.get_sync (BusType.SESSION);
+                glance_dbus_service = new GlanceDBusService (glance_manager);
+                connection.register_object ("/io/github/mrlogiousbanana/poisk/Glance", glance_dbus_service);
+            } catch (Error e) {
+                warning ("Failed to register Glance D-Bus service: %s", e.message);
+            }
+
             this.hold (); // Keep application background daemon alive
         }
 
@@ -139,11 +155,131 @@ namespace Poisk {
                 } else if (arg == "--version" || arg == "-v") {
                     command_line.print ("Poisk 1.1.0\nhttps://github.com/Yatta-Project/poisk\nОсновано на концепциях Vicinae (https://github.com/vicinaehq/vicinae)\n");
                     return 0;
+                } else if (arg == "glance" || arg == "--glance") {
+                    return handle_glance_cli (args, i + 1, command_line);
                 }
             }
 
             activate ();
             return 0;
+        }
+
+        private int handle_glance_cli (string[] args, int start_idx, ApplicationCommandLine cmd_line) {
+            if (start_idx >= args.length) {
+                cmd_line.print ("Использование:\n  poisk glance set [ОПЦИИ]\n  poisk glance clear [id]\n  poisk glance get\n\nОпции set:\n  --id <id>          Идентификатор виджета (по умолчанию: custom)\n  --priority <число> Приоритет (по умолчанию: 50)\n  --title <текст>    Текст виджета\n  --markup <разметка> Pango разметка (bold, цвета и т.д.)\n  --icon <иконка>    Имя системной иконки, эмодзи или путь к файлу\n  --dot <цвет>       Точка-индикатор (green, red, orange, hex)\n  --badge <бейдж>    Клавишный бейдж (↵, Tab, none)\n  --bg <css>         Фон (linear-gradient, hex, rgba)\n  --border <css>     Цвет рамки\n  --color <css>      Цвет текста\n  --action <cmd/url> Команда, URL или desktop-файл\n  --ttl <секунды>    Время жизни виджета\n  --json <json>      JSON-конфигурация целиком\n");
+                return 0;
+            }
+
+            string subcmd = args[start_idx];
+            if (subcmd == "clear") {
+                string item_id = (start_idx + 1 < args.length) ? args[start_idx + 1] : "custom";
+                glance_manager.clear_glance (item_id);
+                cmd_line.print ("Виджет '%s' удалён\n".printf (item_id));
+                return 0;
+            } else if (subcmd == "get") {
+                var active = glance_manager.get_active_glance ();
+                if (active != null) {
+                    cmd_line.print ("Активный виджет: id=%s, priority=%d, title=%s\n".printf (active.id, active.priority, active.title ?? ""));
+                } else {
+                    cmd_line.print ("Нет активного виджета\n");
+                }
+                return 0;
+            } else if (subcmd == "set") {
+                string item_id = "custom";
+                int priority = 50;
+                string? title = null;
+                string? markup = null;
+                string? icon = null;
+                string? dot = null;
+                string? badge = "↵";
+                string? bg = null;
+                string? border = null;
+                string? color = null;
+                string? action = null;
+                int ttl = 0;
+                string? json_data = null;
+
+                for (int j = start_idx + 1; j < args.length; j++) {
+                    string a = args[j];
+                    if (a == "--json" && j + 1 < args.length) {
+                        json_data = args[++j];
+                    } else if (a == "--id" && j + 1 < args.length) {
+                        item_id = args[++j];
+                    } else if (a == "--priority" && j + 1 < args.length) {
+                        priority = int.parse (args[++j]);
+                    } else if (a == "--title" && j + 1 < args.length) {
+                        title = args[++j];
+                    } else if (a == "--markup" && j + 1 < args.length) {
+                        markup = args[++j];
+                    } else if (a == "--icon" && j + 1 < args.length) {
+                        icon = args[++j];
+                    } else if (a == "--dot" && j + 1 < args.length) {
+                        dot = args[++j];
+                    } else if (a == "--badge" && j + 1 < args.length) {
+                        badge = args[++j];
+                        if (badge == "none" || badge == "null" || badge == "false") badge = null;
+                    } else if (a == "--bg" && j + 1 < args.length) {
+                        bg = args[++j];
+                    } else if (a == "--border" && j + 1 < args.length) {
+                        border = args[++j];
+                    } else if (a == "--color" && j + 1 < args.length) {
+                        color = args[++j];
+                    } else if (a == "--action" && j + 1 < args.length) {
+                        action = args[++j];
+                    } else if (a == "--ttl" && j + 1 < args.length) {
+                        ttl = int.parse (args[++j]);
+                    }
+                }
+
+                if (json_data != null) {
+                    try {
+                        var item = GlanceItem.from_json (json_data);
+                        glance_manager.set_glance (item);
+                        cmd_line.print ("Виджет '%s' успешно установлен из JSON\n".printf (item.id));
+                    } catch (Error e) {
+                        cmd_line.printerr ("Ошибка разбора JSON: %s\n".printf (e.message));
+                    }
+                    return 0;
+                }
+
+                var item = new GlanceItem (item_id, priority);
+                item.title = title;
+                item.markup = markup;
+                if (icon != null) {
+                    if (icon.has_prefix ("/") || icon.has_prefix (".")) {
+                        item.icon_path = icon;
+                    } else if (icon.char_count () <= 2 && !icon.has_suffix ("-symbolic")) {
+                        item.icon_emoji = icon;
+                    } else {
+                        item.icon_name = icon;
+                    }
+                }
+                item.dot_color = dot;
+                item.shortcut_badge = badge;
+                item.background = bg;
+                item.border_color = border;
+                item.text_color = color;
+                if (action != null) {
+                    item.action_payload = action;
+                    if (action.has_prefix ("http://") || action.has_prefix ("https://")) {
+                        item.action_type = "url";
+                    } else if (action.has_suffix (".desktop")) {
+                        item.action_type = "app";
+                    } else {
+                        item.action_type = "command";
+                    }
+                }
+                if (ttl > 0) {
+                    item.expires_at = GLib.get_monotonic_time () + (int64) ttl * 1000000;
+                }
+
+                glance_manager.set_glance (item);
+                cmd_line.print ("Виджет '%s' успешно установлен (приоритет %d)\n".printf (item.id, item.priority));
+                return 0;
+            }
+
+            cmd_line.printerr ("Неизвестная команда glance: %s\n".printf (subcmd));
+            return 1;
         }
 
         public static int main (string[] args) {
