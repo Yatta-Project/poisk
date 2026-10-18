@@ -111,8 +111,8 @@ namespace Poisk.Core {
             }
 
             // Execute native callback or command / url / app
-            if (item.native_action != null) {
-                item.native_action ();
+            if (item.has_native_action ()) {
+                item.invoke_native_action ();
             } else if (item.action_type != null) {
                 dispatch_action (item.action_type, item.action_payload);
             }
@@ -129,9 +129,8 @@ namespace Poisk.Core {
         private void dispatch_action (string action_type, string? payload) {
             if (payload == null || payload.length == 0) return;
             try {
-                if (action_type == "url") {
-                    string[] argv = { "xdg-open", payload };
-                    Process.spawn_async (null, argv, null, SpawnFlags.SEARCH_PATH, null, null);
+                if (action_type == "meeting" || action_type == "url") {
+                    MeetingLauncher.launch_meeting (payload);
                 } else if (action_type == "app") {
                     string clean_app = payload.has_suffix (".desktop") ? payload : payload + ".desktop";
                     string[] argv = { "gtk-launch", clean_app };

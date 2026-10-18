@@ -35,7 +35,22 @@ namespace Poisk.Core {
 
         // In-process native hooks (for internal providers)
         public delegate void NativeActionCallback ();
-        public NativeActionCallback? native_action { get; set; default = null; }
+        private NativeActionCallback? _native_action = null;
+
+        public void set_native_action (owned NativeActionCallback? cb) {
+            _native_action = (owned) cb;
+        }
+
+        public void invoke_native_action () {
+            if (_native_action != null) {
+                _native_action ();
+            }
+        }
+
+        public bool has_native_action () {
+            return _native_action != null;
+        }
+
         public Gtk.Widget? custom_widget { get; set; default = null; }
 
         public GlanceItem (string id, int priority = 0) {

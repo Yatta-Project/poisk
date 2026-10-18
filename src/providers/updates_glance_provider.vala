@@ -95,7 +95,7 @@ namespace Poisk.Providers {
                 item.auto_dismiss_on_activate = true;
 
                 // Native action launcher with fallback
-                item.native_action = () => {
+                item.set_native_action (() => {
                     try {
                         string[] argv = { "io.elementary.appcenter", "--show-updates" };
                         Process.spawn_async (null, argv, null, SpawnFlags.SEARCH_PATH, null, null);
@@ -112,7 +112,7 @@ namespace Poisk.Providers {
                             }
                         }
                     }
-                };
+                });
 
                 current_item = item;
                 glance_updated (item);

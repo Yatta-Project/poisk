@@ -410,9 +410,12 @@ namespace Poisk.Providers {
             );
 
             // Native action: launch in app if installed (Zoom, Telegram/AyuGram, Telemost, Teams) or browser
-            item.native_action = () => {
-                if (target_url.length > 0) {
-                    MeetingLauncher.launch_meeting (target_url);
+            string launch_url = target_url;
+            item.action_type = "meeting";
+            item.action_payload = launch_url;
+            item.set_native_action (() => {
+                if (launch_url.length > 0) {
+                    MeetingLauncher.launch_meeting (launch_url);
                 } else {
                     try {
                         string[] argv = { "io.elementary.calendar" };
@@ -421,7 +424,7 @@ namespace Poisk.Providers {
                         warning ("Failed to open calendar app: %s", e.message);
                     }
                 }
-            };
+            });
 
             current_item = item;
             glance_updated (item);
