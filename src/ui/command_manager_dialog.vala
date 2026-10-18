@@ -168,6 +168,26 @@ namespace Poisk.UI {
 
             var content_box = new Box (Orientation.VERTICAL, 24);
 
+            // Group 0: System Info Config (:system)
+            var sysinfo_group = new Adw.PreferencesGroup ();
+            sysinfo_group.title = "Системная информация (:system)";
+            sysinfo_group.description = "Вывод характеристик компьютера через fastfetch и другие fetch-утилиты";
+
+            var sysinfo_row = new Adw.ActionRow ();
+            sysinfo_row.title = "Параметры команды :system";
+            sysinfo_row.subtitle = "Выбор утилиты (fastfetch/neofetch), дополнительных аргументов и действия";
+            var sysinfo_btn = new Button.with_label ("Настроить...");
+            sysinfo_btn.valign = Align.CENTER;
+            sysinfo_btn.add_css_class ("suggested-action");
+            sysinfo_btn.clicked.connect (() => {
+                var dlg = new SystemInfoConfigDialog (this);
+                dlg.present ();
+            });
+            sysinfo_row.add_suffix (sysinfo_btn);
+            sysinfo_row.activatable_widget = sysinfo_btn;
+            sysinfo_group.add (sysinfo_row);
+            content_box.append (sysinfo_group);
+
             // Group 1: Built-in actions
             builtins_group = new Adw.PreferencesGroup ();
             builtins_group.title = "Встроенные команды системы";
@@ -199,6 +219,7 @@ namespace Poisk.UI {
             // Remove previous rows
             // Note: Adw.PreferencesGroup doesn't have a direct clear(), so we recreate the rows
             var builtin_defs = new BuiltinDef[] {
+                { "system:info", "Системная информация (:system)", "fastfetch, neofetch, характеристики, инфо, system, specs", "computer-symbolic" },
                 { "system:lock", "Заблокировать экран", "блок, заблокировать, lock, lockscreen", "system-lock-screen-symbolic" },
                 { "system:suspend", "Спящий режим", "сон, спящий режим, ждущий режим, sleep, suspend", "system-suspend-symbolic" },
                 { "system:reboot", "Перезагрузить компьютер", "перезагрузка, рестарт, reboot, restart", "system-reboot-symbolic" },

@@ -27,6 +27,7 @@ namespace Poisk {
         private PoiskPreferencesWindow? prefs_window = null;
         private GroupManagerDialog? groups_window = null;
         private CommandManagerDialog? commands_window = null;
+        private SystemInfoConfigDialog? system_config_window = null;
 
         public void show_preferences () {
             if (prefs_window == null) {
@@ -61,6 +62,18 @@ namespace Poisk {
                 });
             }
             commands_window.present ();
+        }
+
+        public void show_system_config () {
+            if (system_config_window == null) {
+                Gtk.Window? parent = (prefs_window != null && prefs_window.visible) ? (Gtk.Window) prefs_window : (Gtk.Window?) window;
+                system_config_window = new SystemInfoConfigDialog (parent);
+                system_config_window.close_request.connect (() => {
+                    system_config_window = null;
+                    return false;
+                });
+            }
+            system_config_window.present ();
         }
 
         protected override void startup () {
@@ -161,6 +174,24 @@ namespace Poisk {
                 } else if (arg == "--manage-commands" || arg == "-c" || arg == "--commands") {
                     show_manage_commands ();
                     return 0;
+                } else if (arg == "--system" || arg == "-s" || arg == ":system") {
+                    activate ();
+                    if (window != null) {
+                        string query = ":system";
+                        if (i + 1 < args.length) {
+                            var extra = new StringBuilder ();
+                            for (int j = i + 1; j < args.length; j++) {
+                                extra.append (" ");
+                                extra.append (args[j]);
+                            }
+                            query += extra.str;
+                        }
+                        window.set_search_query (query);
+                    }
+                    return 0;
+                } else if (arg == "--system-config" || arg == "--sysconfig") {
+                    show_system_config ();
+                    return 0;
                 } else if (arg == "--quit" || arg == "-q") {
                     if (window != null) {
                         window.destroy ();
@@ -171,7 +202,7 @@ namespace Poisk {
                     // Daemon mode: stay resident in background without opening window
                     return 0;
                 } else if (arg == "--help" || arg == "-h") {
-                    command_line.print ("Поиск (Poisk) — GTK-ориентированный лёгкий аналог Spotlight\n\nИспользование:\n  poisk [ОПЦИИ]\n\nОпции:\n  -t, --toggle          Показать / скрыть палитру поиска\n  -p, --preferences     Открыть параметры Поиска\n  -g, --manage-groups   Настроить группы и скрытые приложения\n  -c, --manage-commands Настроить системные и пользовательские команды\n  -b, --background      Запустить в фоновом режиме (демон)\n  -q, --quit            Завершить фоновый процесс лаунчера\n  -v, --version         Показать версию\n  -h, --help            Показать эту справку\n");
+                    command_line.print ("Поиск (Poisk) — GTK-ориентированный лёгкий аналог Spotlight\n\nИспользование:\n  poisk [ОПЦИИ]\n\nОпции:\n  -t, --toggle          Показать / скрыть палитру поиска\n  -p, --preferences     Открыть параметры Поиска\n  -g, --manage-groups   Настроить группы и скрытые приложения\n  -c, --manage-commands Настроить системные и пользовательские команды\n  -s, --system          Открыть системную информацию (:system)\n      --system-config   Настроить fastfetch и системную информацию\n  -b, --background      Запустить в фоновом режиме (демон)\n  -q, --quit            Завершить фоновый процесс лаунчера\n  -v, --version         Показать версию\n  -h, --help            Показать эту справку\n");
                     return 0;
                 } else if (arg == "--version" || arg == "-v") {
                     command_line.print ("Poisk 1.1.0\nhttps://github.com/Yatta-Project/poisk\nОсновано на концепциях Vicinae (https://github.com/vicinaehq/vicinae)\n");

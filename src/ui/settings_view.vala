@@ -363,6 +363,24 @@ namespace Poisk.UI {
             manage_commands_row.activatable_widget = manage_cmds_btn;
             commands_prefs.add (manage_commands_row);
 
+            var sysinfo_row = new Adw.ActionRow ();
+            sysinfo_row.title = "Системная информация (:system)";
+            sysinfo_row.subtitle = "Настройка fastfetch, параметров вывода и действий";
+            var sysinfo_btn = new Button.with_label ("Настроить...");
+            sysinfo_btn.valign = Align.CENTER;
+            sysinfo_btn.add_css_class ("suggested-action");
+            sysinfo_btn.clicked.connect (() => {
+                try {
+                    string[] argv = { "poisk", "--system-config" };
+                    Process.spawn_async (null, argv, null, SpawnFlags.SEARCH_PATH, null, null);
+                } catch (Error e) {
+                    warning ("Failed to open system info config: %s", e.message);
+                }
+            });
+            sysinfo_row.add_suffix (sysinfo_btn);
+            sysinfo_row.activatable_widget = sysinfo_btn;
+            commands_prefs.add (sysinfo_row);
+
             // Group 6: About
             var about_group = new Adw.PreferencesGroup ();
             about_group.title = "О программе";

@@ -115,6 +115,19 @@ namespace Poisk.Providers {
                     spawn_cmd ({ "loginctl", "terminate-session", "" });
                 }
             ));
+
+            // 6. System info (:system)
+            actions.add (new SystemAction (
+                "system:info",
+                "Системная информация",
+                "Характеристики и данные о системе (:system)",
+                "computer-symbolic",
+                "Показать",
+                { "система", "информация", "инфо", "характеристики", "fastfetch", "neofetch", "system", "info", "specs", "fetch" },
+                () => {
+                    // Handled in LauncherWindow
+                }
+            ));
         }
 
         private static void spawn_cmd (string[] argv) {

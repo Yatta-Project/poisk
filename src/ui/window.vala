@@ -8,7 +8,8 @@ namespace Poisk.UI {
         public enum WindowMode {
             CAPSULE,
             RESULTS,
-            MENU
+            MENU,
+            SYSTEM
         }
 
         public enum WindowLayoutStyle {
@@ -33,6 +34,8 @@ namespace Poisk.UI {
         private FadingBox list_content_box;
         private Box menu_card;
         private AppGrid app_grid;
+        private Box system_card;
+        private SystemInfoView system_info_view;
         private Label menu_footer_label;
         private Label footer_label;
         private Box footer_box;
@@ -525,6 +528,11 @@ namespace Poisk.UI {
             update_transparency_mode ();
         }
 
+        public void set_search_query (string query) {
+            pill_header.set_text (query);
+            pill_header.grab_entry_focus ();
+        }
+
         public void switch_mode (WindowMode mode) {
             current_mode = mode;
             int cap_width = (current_layout == WindowLayoutStyle.MONOLITHIC) ? 740 : 680;
@@ -533,6 +541,7 @@ namespace Poisk.UI {
                 case WindowMode.CAPSULE:
                     results_card.visible = false;
                     menu_card.visible = false;
+                    system_card.visible = false;
                     pill_header.visible = true;
                     pill_header.remove_css_class ("expanded-header");
                     this.remove_css_class ("expanded-card");
@@ -542,6 +551,7 @@ namespace Poisk.UI {
 
                 case WindowMode.RESULTS:
                     menu_card.visible = false;
+                    system_card.visible = false;
                     results_card.visible = true;
                     pill_header.visible = true;
                     pill_header.add_css_class ("expanded-header");
@@ -552,7 +562,19 @@ namespace Poisk.UI {
 
                 case WindowMode.MENU:
                     results_card.visible = false;
+                    system_card.visible = false;
                     menu_card.visible = true;
+                    pill_header.visible = true;
+                    pill_header.add_css_class ("expanded-header");
+                    this.add_css_class ("expanded-card");
+                    capsule_box.add_css_class ("expanded-card");
+                    capsule_box.set_size_request (cap_width, 444);
+                    break;
+
+                case WindowMode.SYSTEM:
+                    results_card.visible = false;
+                    menu_card.visible = false;
+                    system_card.visible = true;
                     pill_header.visible = true;
                     pill_header.add_css_class ("expanded-header");
                     this.add_css_class ("expanded-card");
@@ -774,6 +796,24 @@ namespace Poisk.UI {
             menu_card.append (menu_footer_box);
             capsule_box.append (menu_card);
 
+            // System Info Card (when typing :system, :sys, :fastfetch)
+            system_card = new Box (Orientation.VERTICAL, 4);
+            system_card.add_css_class ("poisk-results-card");
+            system_card.set_size_request (-1, 384);
+            system_card.valign = Align.FILL;
+            system_card.halign = Align.FILL;
+            system_card.vexpand = true;
+            system_card.hexpand = true;
+            system_card.visible = false;
+
+            system_info_view = new SystemInfoView ();
+            system_info_view.close_requested.connect (() => {
+                pill_header.set_text ("");
+                switch_mode (WindowMode.CAPSULE);
+            });
+            system_card.append (system_info_view);
+            capsule_box.append (system_card);
+
             root_box.append (capsule_box);
             window_container.append (root_box);
             this.set_child (window_container);
@@ -784,6 +824,8 @@ namespace Poisk.UI {
                 activate_selected ();
             } else if (current_mode == WindowMode.MENU) {
                 app_grid.activate_selected ();
+            } else if (current_mode == WindowMode.SYSTEM) {
+                system_info_view.execute_default_action ();
             } else if (current_mode == WindowMode.CAPSULE) {
                 var glance = pill_header.get_glance_pill ();
                 if (glance.visible && glance.has_action) {
@@ -797,7 +839,7 @@ namespace Poisk.UI {
             key_controller.set_propagation_phase (PropagationPhase.CAPTURE);
             key_controller.key_pressed.connect ((keyval, keycode, state) => {
                 if (keyval == Gdk.Key.Escape) {
-                    if (current_mode == WindowMode.RESULTS || current_mode == WindowMode.MENU || pill_header.get_text ().length > 0) {
+                    if (current_mode == WindowMode.RESULTS || current_mode == WindowMode.MENU || current_mode == WindowMode.SYSTEM || pill_header.get_text ().length > 0) {
                         pill_header.set_text ("");
                         switch_mode (WindowMode.CAPSULE);
                         return true;
@@ -841,6 +883,22 @@ namespace Poisk.UI {
                     }
                     if (keyval == Gdk.Key.Return || keyval == Gdk.Key.KP_Enter) {
                         app_grid.activate_selected ();
+                        return true;
+                    }
+                }
+
+                if (current_mode == WindowMode.SYSTEM) {
+                    if (keyval == Gdk.Key.Return || keyval == Gdk.Key.KP_Enter) {
+                        system_info_view.execute_default_action ();
+                        return true;
+                    }
+                    if (keyval == Gdk.Key.c && (state & Gdk.ModifierType.CONTROL_MASK) != 0) {
+                        system_info_view.copy_to_clipboard ();
+                        return true;
+                    }
+                    if (keyval == Gdk.Key.r && (state & Gdk.ModifierType.CONTROL_MASK) != 0) {
+                        Poisk.Core.SystemInfoManager.get_default ().invalidate_cache ();
+                        system_info_view.load_info.begin (null);
                         return true;
                     }
                 }
@@ -1198,6 +1256,13 @@ namespace Poisk.UI {
                     opacity: 0.20;
                     min-height: 1px;
                 }
+
+                .system-fetch-text {
+                    font-family: "JetBrains Mono", "Fira Code", "Cascadia Code", "Ubuntu Mono", monospace;
+                    font-size: 11.5px;
+                    line-height: 1.35;
+                    font-feature-settings: "liga" 0;
+                }
             """;
             provider.load_from_string (css);
             Gtk.StyleContext.add_provider_for_display (
@@ -1257,6 +1322,20 @@ namespace Poisk.UI {
                 return;
             }
 
+            if (q == ":system" || q.has_prefix (":system ") || q == ":sys" || q.has_prefix (":sys ") || q == ":fastfetch") {
+                string extra = "";
+                if (q.has_prefix (":system ")) {
+                    extra = q.substring (8).strip ();
+                } else if (q.has_prefix (":sys ")) {
+                    extra = q.substring (5).strip ();
+                } else if (q.has_prefix (":fastfetch ")) {
+                    extra = q.substring (11).strip ();
+                }
+                system_info_view.load_info.begin (extra.length > 0 ? extra : null);
+                switch_mode (WindowMode.SYSTEM);
+                return;
+            }
+
             var items = yield engine.query (query, cancellable);
             if (cancellable.is_cancelled ()) return;
 
@@ -1299,6 +1378,10 @@ namespace Poisk.UI {
             var result_row = row as ResultRow;
             if (result_row != null) {
                 var item = result_row.item;
+                if (item.id == "system:info") {
+                    pill_header.set_text (":system");
+                    return;
+                }
                 this.set_visible (false);
                 item.execute ();
             }
